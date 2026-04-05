@@ -1,0 +1,130 @@
+import { Phone, Mail, Radio, Shield, Zap, Clock } from 'lucide-react'
+
+function Section({ title, description, children }: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6">
+      <div className="px-6 py-5 border-b border-slate-100">
+        <h2 className="text-base font-semibold text-slate-800">{title}</h2>
+        <p className="text-sm text-slate-400 mt-0.5">{description}</p>
+      </div>
+      <div className="px-6 py-5">{children}</div>
+    </div>
+  )
+}
+
+function InfoRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
+      <span className="text-sm text-slate-500">{label}</span>
+      <span className={`text-sm font-medium text-slate-700 ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+    </div>
+  )
+}
+
+function StatusChip({ active }: { active: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${active ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-slate-400'}`} />
+      {active ? 'Aktiv' : 'Inaktiv'}
+    </span>
+  )
+}
+
+export default function EinstellungenPage() {
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-800">Einstellungen</h1>
+        <p className="text-slate-500 text-sm mt-1">Konfiguration von Lisa und dem System</p>
+      </div>
+
+      {/* Lisa Status */}
+      <Section
+        title="Lisa KI-Assistentin"
+        description="Status und Erreichbarkeit der KI-Assistentin"
+      >
+        <div className="flex items-center gap-4 mb-6 p-4 bg-green-50 rounded-xl">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
+              L
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-slate-800">Lisa ist aktiv</p>
+            <p className="text-sm text-slate-500">Nimmt Anrufe entgegen und erstellt automatisch Tickets</p>
+          </div>
+          <StatusChip active={true} />
+        </div>
+
+        <InfoRow label="Telefonnummer" value="+1 (662) 439-4944" mono />
+        <InfoRow label="Verfügbarkeit" value="24/7 – Immer erreichbar" />
+        <InfoRow label="Sprache" value="Deutsch" />
+        <InfoRow label="Anbieter" value="Retell AI" />
+      </Section>
+
+      {/* Webhook */}
+      <Section
+        title="Webhook & Integration"
+        description="Verbindung zwischen Retell AI und diesem System"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Zap className="w-4 h-4 text-green-500" />
+          <span className="text-sm font-medium text-green-700">Webhook aktiv</span>
+        </div>
+        <InfoRow
+          label="Webhook URL"
+          value="hausverwaltung-platform.onrender.com/webhook/retell"
+          mono
+        />
+        <InfoRow label="Hosting" value="Render.com" />
+        <InfoRow label="Trigger" value="call_ended, call_analyzed" />
+      </Section>
+
+      {/* Supabase */}
+      <Section
+        title="Datenbank"
+        description="Supabase PostgreSQL – Speicherung aller Anrufe und Tickets"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Shield className="w-4 h-4 text-blue-500" />
+          <span className="text-sm font-medium text-blue-700">Verbindung aktiv (Service Role)</span>
+        </div>
+        <InfoRow label="Anbieter" value="Supabase" />
+        <InfoRow label="Region" value="eu-west-1 (Frankfurt)" />
+        <InfoRow label="Tabellen" value="calls, tickets, tenants" />
+      </Section>
+
+      {/* E-Mail */}
+      <Section
+        title="E-Mail Benachrichtigungen"
+        description="Automatische Benachrichtigungen bei neuen Tickets"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Mail className="w-4 h-4 text-slate-300" />
+          <span className="text-sm font-medium text-slate-400">Noch nicht konfiguriert</span>
+        </div>
+        <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+          <p className="text-sm text-amber-700 font-medium mb-1">SMTP noch nicht eingerichtet</p>
+          <p className="text-xs text-amber-600">
+            Um E-Mail-Benachrichtigungen zu aktivieren, konfiguriere die SMTP-Umgebungsvariablen in Render:
+            SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+          </p>
+        </div>
+      </Section>
+
+      {/* Info */}
+      <div className="bg-slate-100 rounded-2xl px-6 py-5 flex items-start gap-3">
+        <Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Einstellungen werden direkt in den Umgebungsvariablen des Backends (Render.com) und in Retell AI konfiguriert.
+          Änderungen an Lisa's Verhalten können im Retell AI Dashboard vorgenommen werden.
+        </p>
+      </div>
+    </div>
+  )
+}
