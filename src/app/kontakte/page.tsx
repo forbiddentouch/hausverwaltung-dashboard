@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Tenant } from '@/lib/supabase'
-import { Search, Plus, Edit2, Trash2, X, Users } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote } from 'lucide-react'
 
-interface Contact extends Tenant {
-  email?: string
-  address?: string
-  notes?: string
-}
-
-interface ManualContact extends Contact {
-  isManual: true
+interface Contact {
+  id: string
+  vorname: string
+  nachname: string
+  telefon: string
+  email: string
+  strasse: string
+  hausnummer: string
+  plz: string
+  stadt: string
+  notizen: string
+  createdAt: string
 }
 
 const AVATAR_COLORS = [
@@ -21,40 +24,84 @@ const AVATAR_COLORS = [
   'from-amber-400 to-amber-600',
   'from-pink-400 to-pink-600',
   'from-cyan-400 to-cyan-600',
+  'from-orange-400 to-orange-600',
+  'from-teal-400 to-teal-600',
 ]
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+const STORAGE_KEY = 'immogreta_kontakte'
+
+function getInitials(vorname: string, nachname: string): string {
+  return ((vorname[0] || '') + (nachname[0] || '')).toUpperCase()
 }
 
-function getAvatarColor(index: number): string {
-  return AVATAR_COLORS[index % AVATAR_COLORS.length]
+function getAvatarColor(id: string): string {
+  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
 }
 
-interface AddContactModalProps {
+function generateId(): string {
+  return 'k_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+}
+
+function loadContacts(): Contact[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveContacts(contacts: Contact[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts))
+  } catch {
+    console.error('Fehler beim Speichern')
+  }
+}
+
+const emptyForm = {
+  vorname: '',
+  nachname: '',
+  telefon: '',
+  email: '',
+  strasse: '',
+  hausnummer: '',
+  plz: '',
+  stadt: '',
+  notizen: '',
+}
+
+interface ContactModalProps {
   isOpen: boolean
+  mode: 'add' | 'edit'
+  initial?: Contact
   onClose: () => void
-  onSubmit: (contact: Omit<Contact, 'id'>) => void
-  isLoading: boolean
+  onSubmit: (data: typeof emptyForm) => void
 }
 
-function AddContactModal({ isOpen, onClose, onSubmit, isLoading }: AddContactModalProps) {
-  const [formData, setFormData] = useState({
-    vorname: '',
-    nachname: '',
-    telefonnummer: '',
-    email: '',
-    strasse: '',
-    hausnummer: '',
-    plz: '',
-    stadt: '',
-    notizen: '',
-  })
+function ContactModal({ isOpen, mode, initial, onClose, onSubmit }: ContactModalProps) {
+  const [formData, setFormData] = useState(emptyForm)
+
+  useEffect(() => {
+    if (isOpen) {
+      if (mode === 'edit' && initial) {
+        setFormData({
+          vorname: initial.vorname,
+          nachname: initial.nachname,
+          telefon: initial.telefon,
+          email: initial.email,
+          strasse: initial.strasse,
+          hausnummer: initial.hausnummer,
+          plz: initial.plz,
+          stadt: initial.stadt,
+          notizen: initial.notizen,
+        })
+      } else {
+        setFormData(emptyForm)
+      }
+    }
+  }, [isOpen, mode, initial])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -63,203 +110,106 @@ function AddContactModal({ isOpen, onClose, onSubmit, isLoading }: AddContactMod
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!formData.vorname.trim() || !formData.nachname.trim()) {
-      alert('Bitte füllen Sie Vorname und Nachname aus')
-      return
-    }
-
-    const fullName = `${formData.vorname.trim()} ${formData.nachname.trim()}`
-    const address = [formData.strasse, formData.hausnummer].filter(Boolean).join(' ')
-    const location = [formData.plz, formData.stadt].filter(Boolean).join(' ')
-    const fullAddress = [address, location].filter(Boolean).join(', ')
-
-    onSubmit({
-      name: fullName,
-      phone_number: formData.telefonnummer || null,
-      email: formData.email || undefined,
-      address: fullAddress || undefined,
-      notes: formData.notizen || undefined,
-    } as any)
-
-    setFormData({
-      vorname: '',
-      nachname: '',
-      telefonnummer: '',
-      email: '',
-      strasse: '',
-      hausnummer: '',
-      plz: '',
-      stadt: '',
-      notizen: '',
-    })
+    if (!formData.vorname.trim() || !formData.nachname.trim()) return
+    onSubmit(formData)
   }
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-lg shadow-lg max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-800">Neuen Kontakt anlegen</h2>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 hover:bg-slate-100 rounded transition-colors disabled:opacity-50"
-          >
-            <X className="w-5 h-5 text-slate-500" />
+      <div className="bg-white rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 className="text-lg font-semibold text-slate-800">
+            {mode === 'add' ? 'Neuen Kontakt anlegen' : 'Kontakt bearbeiten'}
+          </h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Row 1: Vorname + Nachname */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Vorname <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Vorname <span className="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                name="vorname"
-                value={formData.vorname}
-                onChange={handleChange}
+              <input type="text" name="vorname" value={formData.vorname} onChange={handleChange}
                 placeholder="z.B. Max"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Nachname <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Nachname <span className="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                name="nachname"
-                value={formData.nachname}
-                onChange={handleChange}
+              <input type="text" name="nachname" value={formData.nachname} onChange={handleChange}
                 placeholder="z.B. Mustermann"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
 
-          {/* Row 2: Telefon + E-Mail */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Telefonnummer</label>
-              <input
-                type="tel"
-                name="telefonnummer"
-                value={formData.telefonnummer}
-                onChange={handleChange}
-                placeholder="z.B. +49 123 456789"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Telefon</label>
+              <input type="tel" name="telefon" value={formData.telefon} onChange={handleChange}
+                placeholder="+49 123 456789"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">E-Mail</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="z.B. max@example.com"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">E-Mail</label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange}
+                placeholder="max@example.com"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
 
-          {/* Row 3: Straße + Hausnummer */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Straße</label>
-              <input
-                type="text"
-                name="strasse"
-                value={formData.strasse}
-                onChange={handleChange}
-                placeholder="z.B. Hauptstraße"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Straße</label>
+              <input type="text" name="strasse" value={formData.strasse} onChange={handleChange}
+                placeholder="Hauptstraße"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Hausnummer</label>
-              <input
-                type="text"
-                name="hausnummer"
-                value={formData.hausnummer}
-                onChange={handleChange}
-                placeholder="z.B. 42"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Hausnr.</label>
+              <input type="text" name="hausnummer" value={formData.hausnummer} onChange={handleChange}
+                placeholder="42"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
 
-          {/* Row 4: PLZ + Stadt */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">PLZ</label>
-              <input
-                type="text"
-                name="plz"
-                value={formData.plz}
-                onChange={handleChange}
-                placeholder="z.B. 10115"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">PLZ</label>
+              <input type="text" name="plz" value={formData.plz} onChange={handleChange}
+                placeholder="10115"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Stadt</label>
-              <input
-                type="text"
-                name="stadt"
-                value={formData.stadt}
-                onChange={handleChange}
-                placeholder="z.B. Berlin"
-                disabled={isLoading}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Stadt</label>
+              <input type="text" name="stadt" value={formData.stadt} onChange={handleChange}
+                placeholder="Berlin"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
 
-          {/* Notizen */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Notizen</label>
-            <textarea
-              name="notizen"
-              value={formData.notizen}
-              onChange={handleChange}
-              placeholder="z.B. Wohnungsnummer, Besonderheiten..."
-              disabled={isLoading}
+            <label className="block text-xs font-medium text-slate-600 mb-1">Notizen</label>
+            <textarea name="notizen" value={formData.notizen} onChange={handleChange}
+              placeholder="Wohnungsnummer, Besonderheiten..."
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 resize-none"
-            />
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
           </div>
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
+          <div className="flex gap-3 pt-2 border-t border-slate-100">
+            <button type="button" onClick={onClose}
+              className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
               Abbrechen
             </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? 'Wird erstellt...' : 'Kontakt anlegen'}
+            <button type="submit"
+              disabled={!formData.vorname.trim() || !formData.nachname.trim()}
+              className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              {mode === 'add' ? 'Kontakt anlegen' : 'Änderungen speichern'}
             </button>
           </div>
         </form>
@@ -268,232 +218,273 @@ function AddContactModal({ isOpen, onClose, onSubmit, isLoading }: AddContactMod
   )
 }
 
+interface DetailPanelProps {
+  contact: Contact | null
+  onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
+}
+
+function DetailPanel({ contact, onClose, onEdit, onDelete }: DetailPanelProps) {
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  useEffect(() => { setDeleteConfirm(false) }, [contact])
+
+  if (!contact) return null
+
+  const fullAddress = [
+    [contact.strasse, contact.hausnummer].filter(Boolean).join(' '),
+    [contact.plz, contact.stadt].filter(Boolean).join(' '),
+  ].filter(Boolean).join(', ')
+
+  return (
+    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-40 flex flex-col">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <h3 className="font-semibold text-slate-800">Kontaktdetails</h3>
+        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+          <X className="w-4 h-4 text-slate-500" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex flex-col items-center py-4">
+          <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getAvatarColor(contact.id)} flex items-center justify-center mb-3`}>
+            <span className="text-white text-2xl font-bold">{getInitials(contact.vorname, contact.nachname)}</span>
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">{contact.vorname} {contact.nachname}</h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Erstellt am {new Date(contact.createdAt).toLocaleDateString('de-DE')}
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {contact.telefon && (
+            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+              <Phone className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-slate-400 mb-0.5">Telefon</p>
+                <a href={`tel:${contact.telefon}`} className="text-sm font-medium text-slate-800 hover:text-blue-600">
+                  {contact.telefon}
+                </a>
+              </div>
+            </div>
+          )}
+          {contact.email && (
+            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+              <Mail className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-slate-400 mb-0.5">E-Mail</p>
+                <a href={`mailto:${contact.email}`} className="text-sm font-medium text-slate-800 hover:text-violet-600 break-all">
+                  {contact.email}
+                </a>
+              </div>
+            </div>
+          )}
+          {fullAddress && (
+            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+              <MapPin className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-slate-400 mb-0.5">Adresse</p>
+                <p className="text-sm font-medium text-slate-800">{fullAddress}</p>
+              </div>
+            </div>
+          )}
+          {contact.notizen && (
+            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+              <StickyNote className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-slate-400 mb-0.5">Notizen</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{contact.notizen}</p>
+              </div>
+            </div>
+          )}
+          {!contact.telefon && !contact.email && !fullAddress && !contact.notizen && (
+            <p className="text-sm text-slate-400 text-center py-4">Keine weiteren Details vorhanden</p>
+          )}
+        </div>
+      </div>
+
+      <div className="p-5 border-t border-slate-100 space-y-2">
+        <button onClick={onEdit}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+          <Edit2 className="w-4 h-4" />
+          Bearbeiten
+        </button>
+        {deleteConfirm ? (
+          <div className="flex gap-2">
+            <button onClick={() => setDeleteConfirm(false)}
+              className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+              Abbrechen
+            </button>
+            <button onClick={onDelete}
+              className="flex-1 px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white hover:bg-red-600 transition-colors">
+              Wirklich löschen
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setDeleteConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
+            <Trash2 className="w-4 h-4" />
+            Löschen
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function KontaktePage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
+  const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined)
+  const [savedFeedback, setSavedFeedback] = useState<string | null>(null)
 
-  // Fetch contacts on mount
   useEffect(() => {
-    fetchContacts()
+    setContacts(loadContacts())
   }, [])
 
-  async function fetchContacts() {
-    try {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .order('name', { ascending: true })
-
-      if (error) {
-        console.error('Error fetching contacts:', error)
-        return
-      }
-
-      setContacts((data ?? []) as Contact[])
-    } catch (err) {
-      console.error('Error:', err)
-    }
+  function showFeedback(msg: string) {
+    setSavedFeedback(msg)
+    setTimeout(() => setSavedFeedback(null), 2500)
   }
 
-  async function addContact(contactData: Omit<Contact, 'id'>) {
-    setIsLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('tenants')
-        .insert([
-          {
-            name: contactData.name,
-            phone_number: contactData.phone_number,
-          },
-        ])
-        .select()
-
-      if (error) {
-        console.error('Error adding contact:', error)
-        alert('Fehler beim Erstellen des Kontakts: ' + error.message)
-        return
-      }
-
-      // Add email/address/notes to local state
-      if (data && data.length > 0) {
-        const newContact: Contact = {
-          ...data[0],
-          email: contactData.email,
-          address: contactData.address,
-          notes: contactData.notes,
-        }
-        setContacts(prev => [...prev, newContact].sort((a, b) => a.name.localeCompare(b.name)))
-      }
-
-      setIsModalOpen(false)
-    } catch (err) {
-      console.error('Error:', err)
-      alert('Ein Fehler ist aufgetreten')
-    } finally {
-      setIsLoading(false)
-    }
+  function handleAddContact(data: typeof emptyForm) {
+    const newContact: Contact = { id: generateId(), ...data, createdAt: new Date().toISOString() }
+    const updated = [...contacts, newContact].sort((a, b) =>
+      (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+    setContacts(updated)
+    saveContacts(updated)
+    setModalOpen(false)
+    showFeedback('Kontakt angelegt')
   }
 
-  async function deleteContact(id: string) {
-    try {
-      const { error } = await supabase.from('tenants').delete().eq('id', id)
-
-      if (error) {
-        console.error('Error deleting contact:', error)
-        alert('Fehler beim Löschen: ' + error.message)
-        return
-      }
-
-      setContacts(prev => prev.filter(c => c.id !== id))
-      setDeleteConfirm(null)
-    } catch (err) {
-      console.error('Error:', err)
-      alert('Ein Fehler ist aufgetreten')
-    }
+  function handleEditContact(data: typeof emptyForm) {
+    if (!editingContact) return
+    const updated = contacts.map(c => c.id === editingContact.id ? { ...c, ...data } : c)
+      .sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+    setContacts(updated)
+    saveContacts(updated)
+    const updatedContact = updated.find(c => c.id === editingContact.id)
+    if (updatedContact) setSelectedContact(updatedContact)
+    setModalOpen(false)
+    showFeedback('Änderungen gespeichert')
   }
 
-  // Filter contacts based on search
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (contact.phone_number && contact.phone_number.includes(searchQuery))
-  )
+  function handleDeleteContact() {
+    if (!selectedContact) return
+    const updated = contacts.filter(c => c.id !== selectedContact.id)
+    setContacts(updated)
+    saveContacts(updated)
+    setSelectedContact(null)
+    showFeedback('Kontakt gelöscht')
+  }
+
+  function openEdit() {
+    if (!selectedContact) return
+    setEditingContact(selectedContact)
+    setModalMode('edit')
+    setModalOpen(true)
+  }
+
+  function openAdd() {
+    setEditingContact(undefined)
+    setModalMode('add')
+    setModalOpen(true)
+  }
+
+  const filteredContacts = contacts.filter(c => {
+    const q = searchQuery.toLowerCase()
+    return c.vorname.toLowerCase().includes(q) || c.nachname.toLowerCase().includes(q) ||
+      c.telefon.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) ||
+      c.stadt.toLowerCase().includes(q)
+  })
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
+    <div className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'mr-96' : ''}`}>
+      {savedFeedback && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg shadow-lg text-sm font-medium">
+          <Check className="w-4 h-4" />
+          {savedFeedback}
+        </div>
+      )}
+
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Kontakte</h1>
         <p className="text-slate-500 text-sm mt-1">Verwalten Sie Ihre Mieter und Ansprechpartner</p>
       </div>
 
-      {/* Top bar: Search + Add button */}
-      <div className="flex gap-3 mb-8">
+      <div className="flex gap-3 mb-6">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Nach Name oder Telefon suchen..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Nach Name, Telefon oder E-Mail suchen..."
+            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={openAdd}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors">
           <Plus className="w-4 h-4" />
           Neuen Kontakt anlegen
         </button>
       </div>
 
-      {/* Contact table */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         {filteredContacts.length === 0 ? (
-          <div className="py-16 text-center">
-            <Users className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">
+          <div className="py-20 text-center">
+            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+              <Users className="w-7 h-7 text-slate-300" />
+            </div>
+            <p className="text-slate-400 font-medium">
               {searchQuery ? 'Keine Kontakte gefunden' : 'Noch keine Kontakte vorhanden'}
             </p>
-            <p className="text-slate-300 text-xs mt-1">
-              {!searchQuery && 'Klicken Sie auf "Neuen Kontakt anlegen", um zu beginnen'}
-            </p>
+            {!searchQuery && (
+              <button onClick={openAdd}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                Ersten Kontakt anlegen
+              </button>
+            )}
           </div>
         ) : (
           <>
-            {/* Table header */}
             <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 grid grid-cols-12 gap-4">
-              <p className="col-span-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Name</p>
+              <p className="col-span-4 text-xs font-semibold text-slate-400 uppercase tracking-wide">Name</p>
               <p className="col-span-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Telefon</p>
-              <p className="col-span-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Adresse</p>
-              <p className="col-span-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Notizen</p>
-              <p className="col-span-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Aktionen</p>
+              <p className="col-span-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">E-Mail</p>
+              <p className="col-span-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Stadt</p>
+              <p className="col-span-1"></p>
             </div>
-
-            {/* Table rows */}
             <div className="divide-y divide-slate-50">
-              {filteredContacts.map((contact, index) => (
-                <div key={contact.id} className="px-6 py-4 grid grid-cols-12 gap-4 items-start hover:bg-slate-50 transition-colors">
-                  {/* Name with avatar */}
-                  <div className="col-span-3 flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarColor(index)} flex items-center justify-center flex-shrink-0`}
-                    >
-                      <span className="text-white text-xs font-bold">{getInitials(contact.name)}</span>
+              {filteredContacts.map(contact => (
+                <div key={contact.id}
+                  onClick={() => setSelectedContact(selectedContact?.id === contact.id ? null : contact)}
+                  className={`px-6 py-4 grid grid-cols-12 gap-4 items-center cursor-pointer transition-colors ${
+                    selectedContact?.id === contact.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50'
+                  }`}>
+                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(contact.id)} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-white text-xs font-bold">{getInitials(contact.vorname, contact.nachname)}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{contact.name}</p>
-                      {contact.email && (
-                        <p className="text-xs text-slate-400 truncate">{contact.email}</p>
-                      )}
+                      <p className="text-sm font-semibold text-slate-800 truncate">{contact.nachname}, {contact.vorname}</p>
+                      {contact.notizen && <p className="text-xs text-slate-400 truncate">{contact.notizen}</p>}
                     </div>
                   </div>
-
-                  {/* Telefon */}
                   <div className="col-span-2 min-w-0">
-                    {contact.phone_number ? (
-                      <p className="text-sm text-slate-700 font-mono">{contact.phone_number}</p>
-                    ) : (
-                      <p className="text-xs text-slate-300 italic">—</p>
-                    )}
+                    {contact.telefon ? <p className="text-sm text-slate-700 font-mono truncate">{contact.telefon}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-
-                  {/* Adresse */}
-                  <div className="col-span-2 min-w-0">
-                    {contact.address ? (
-                      <p className="text-sm text-slate-600 truncate">{contact.address}</p>
-                    ) : (
-                      <p className="text-xs text-slate-300 italic">—</p>
-                    )}
-                  </div>
-
-                  {/* Notizen */}
                   <div className="col-span-3 min-w-0">
-                    {contact.notes ? (
-                      <p className="text-sm text-slate-600 truncate">{contact.notes}</p>
-                    ) : (
-                      <p className="text-xs text-slate-300 italic">—</p>
-                    )}
+                    {contact.email ? <p className="text-sm text-slate-600 truncate">{contact.email}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-
-                  {/* Aktionen */}
-                  <div className="col-span-2 flex items-center gap-2">
-                    {deleteConfirm === contact.id ? (
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-slate-600">Wirklich löschen?</span>
-                        <button
-                          onClick={() => deleteContact(contact.id)}
-                          className="px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors font-medium"
-                        >
-                          Ja
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(null)}
-                          className="px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors font-medium"
-                        >
-                          Nein
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          className="p-1.5 hover:bg-slate-200 rounded transition-colors text-slate-400 hover:text-slate-600"
-                          title="Bearbeiten"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(contact.id)}
-                          className="p-1.5 hover:bg-red-50 rounded transition-colors text-slate-400 hover:text-red-600"
-                          title="Löschen"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
+                  <div className="col-span-2 min-w-0">
+                    {contact.stadt ? <p className="text-sm text-slate-600 truncate">{contact.stadt}</p> : <p className="text-xs text-slate-300">—</p>}
+                  </div>
+                  <div className="col-span-1 flex justify-end" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => { setSelectedContact(contact); setEditingContact(contact); setModalMode('edit'); setModalOpen(true) }}
+                      className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-600" title="Bearbeiten">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -502,13 +493,13 @@ export default function KontaktePage() {
         )}
       </div>
 
-      {/* Add Contact Modal */}
-      <AddContactModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={addContact}
-        isLoading={isLoading}
-      />
+      {contacts.length > 0 && (
+        <p className="text-xs text-slate-400 mt-3 px-1">{filteredContacts.length} von {contacts.length} Kontakten</p>
+      )}
+
+      <DetailPanel contact={selectedContact} onClose={() => setSelectedContact(null)} onEdit={openEdit} onDelete={handleDeleteContact} />
+      <ContactModal isOpen={modalOpen} mode={modalMode} initial={editingContact} onClose={() => setModalOpen(false)}
+        onSubmit={modalMode === 'add' ? handleAddContact : handleEditContact} />
     </div>
   )
 }

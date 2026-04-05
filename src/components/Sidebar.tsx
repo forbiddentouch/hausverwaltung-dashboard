@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  Building2,
   ChevronRight,
   Phone,
   Users,
@@ -39,9 +39,7 @@ export default function Sidebar() {
       <Link
         href={href}
         className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-          active
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-slate-600 hover:bg-gray-50'
+          active ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-gray-50'
         }`}
       >
         <div className="flex items-center gap-3">
@@ -59,12 +57,22 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-56 bg-white border-r border-slate-200 flex flex-col z-10">
-      {/* TOP: Company name area */}
+      {/* TOP: ImmoGreta branding with avatar */}
       <div className="px-4 py-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-blue-600" />
+            {/* Avatar image */}
+            <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/greta-avatar.png"
+                alt="ImmoGreta"
+                width={36}
+                height={36}
+                className="w-full h-full object-cover object-top"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-slate-900 text-sm leading-tight">ImmoGreta</p>
@@ -78,7 +86,7 @@ export default function Sidebar() {
       </div>
 
       {/* MENU section */}
-      <div className="flex-1 px-3 py-4">
+      <div className="flex-1 px-3 py-4 overflow-y-auto">
         <div className="mb-6">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-3">Menu</p>
           <div className="space-y-1">
@@ -125,10 +133,7 @@ export default function Sidebar() {
         </div>
 
         {/* Help link */}
-        <Link
-          href="#"
-          className="block text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors"
-        >
+        <Link href="#" className="block text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors">
           Hilfe benötigt? →
         </Link>
       </div>
