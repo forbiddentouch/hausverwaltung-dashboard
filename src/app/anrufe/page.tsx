@@ -2,18 +2,38 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Phone, PhoneMissed, PhoneCall, Clock, Search, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  Phone,
+  PhoneMissed,
+  PhoneCall,
+  Clock,
+  Search,
+  ChevronDown,
+  X,
+  Filter,
+  Calendar,
+  Star,
+  Mail,
+  Check,
+  Flame,
+  AlertTriangle,
+  UserCheck,
+  Users,
+} from 'lucide-react'
 
 type Call = {
   id: string
   caller_number: string | null
-  status: string
+  status: 'completed' | 'in_progress' | 'missed'
   started_at: string
   ended_at: string | null
   duration_sec: number | null
   transcript: string | null
   summary: string | null
   tenant_id: string | null
+  contact_name?: string
+  contact_phone?: string
+  contact_address?: string
 }
 
 function formatDuration(sec: number | null) {
@@ -21,6 +41,14 @@ function formatDuration(sec: number | null) {
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return m > 0 ? `${m} min` : `${s}s`
+}
+
+function formatDurationLong(sec: number | null) {
+  if (!sec) return '—'
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  if (m > 0) return `${m} min ${s}s`
+  return `${s}s`
 }
 
 function formatDate(iso: string) {
@@ -31,48 +59,122 @@ function formatDate(iso: string) {
   if (diffH < 24 && d.getDate() === now.getDate()) {
     return `Heute um ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
   }
-  if (diffH < 48) return `Gestern um ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
-  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ` um ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
-}
-
-function getCategoryTag(summary: string | null): { label: string; bg: string; text: string } {
-  if (!summary) return { label: 'Kein Anliegen', bg: 'bg-slate-100', text: 'text-slate-500' }
-  const s = summary.toLowerCase()
-  if (s.includes('notfall') || s.includes('rohrbruch') || s.includes('dringend'))
-    return { label: 'Notfall', bg: 'bg-red-100', text: 'text-red-700' }
-  if (s.includes('heizung') || s.includes('störung') || s.includes('wartung') || s.includes('reparatur'))
-    return { label: 'Heizungsproblem', bg: 'bg-orange-100', text: 'text-orange-700' }
-  if (s.includes('angebot') || s.includes('preis') || s.includes('kosten') || s.includes('verkauf'))
-    return { label: 'Angebotsanfrage', bg: 'bg-yellow-100', text: 'text-yellow-700' }
-  if (s.includes('mitarbeiter') || s.includes('personal') || s.includes('kollege'))
-    return { label: 'Mitarbeiteranfrage', bg: 'bg-purple-100', text: 'text-purple-700' }
-  if (s.includes('neukunde') || s.includes('interessent') || s.includes('neukundenanfrage'))
-    return { label: 'Neukundenanfrage', bg: 'bg-green-100', text: 'text-green-700' }
-  if (s.includes('miete') || s.includes('mieter') || s.includes('wohnung') || s.includes('kündigung'))
-    return { label: 'Mietangelegenheit', bg: 'bg-blue-100', text: 'text-blue-700' }
-  return { label: 'Allgemeine Anfrage', bg: 'bg-slate-100', text: 'text-slate-600' }
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; dot: string; text: string }> = {
-    completed: { label: 'Abgeschlossen', dot: 'bg-green-500', text: 'text-green-700' },
-    in_progress: { label: 'Laufend', dot: 'bg-blue-500', text: 'text-blue-700' },
-    missed: { label: 'Verpasst', dot: 'bg-red-500', text: 'text-red-600' },
-  }
-  const s = map[status] ?? { label: status, dot: 'bg-slate-400', text: 'text-slate-600' }
+  if (diffH < 48)
+    return `Gestern um ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${s.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {s.label}
-    </span>
+    d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) +
+    ` um ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
   )
+}
+
+function getCategory(summary: string | null): {
+  label: string
+  emoji: string
+  bg: string
+  text: string
+  borderColor: string
+} {
+  if (!summary)
+    return {
+      label: 'Ohne Aufgabe',
+      emoji: '📋',
+      bg: 'bg-gray-50',
+      text: 'text-gray-700',
+      borderColor: 'border-gray-200',
+    }
+  const s = summary.toLowerCase()
+
+  if (
+    s.includes('notfall') ||
+    s.includes('rohrbruch') ||
+    s.includes('dringend') ||
+    s.includes('wasser') ||
+    s.includes('gas')
+  ) {
+    return {
+      label: 'Notfall',
+      emoji: '🚨',
+      bg: 'bg-red-50',
+      text: 'text-red-700',
+      borderColor: 'border-red-200',
+    }
+  }
+
+  if (
+    s.includes('heizung') ||
+    s.includes('störung') ||
+    s.includes('wartung') ||
+    s.includes('reparatur') ||
+    s.includes('thermostat') ||
+    s.includes('temperatur')
+  ) {
+    return {
+      label: 'Heizungsprobleme aufnehmen',
+      emoji: '🔥',
+      bg: 'bg-orange-50',
+      text: 'text-orange-700',
+      borderColor: 'border-orange-200',
+    }
+  }
+
+  if (
+    s.includes('neukunde') ||
+    s.includes('interessent') ||
+    s.includes('neukundenanfrage') ||
+    s.includes('erstanfrage')
+  ) {
+    return {
+      label: 'Neukunden',
+      emoji: '🌱',
+      bg: 'bg-green-50',
+      text: 'text-green-700',
+      borderColor: 'border-green-200',
+    }
+  }
+
+  if (
+    s.includes('mitarbeiter') ||
+    s.includes('personal') ||
+    s.includes('kollege') ||
+    s.includes('team')
+  ) {
+    return {
+      label: 'Mitarbeiter',
+      emoji: '👥',
+      bg: 'bg-yellow-50',
+      text: 'text-yellow-700',
+      borderColor: 'border-yellow-200',
+    }
+  }
+
+  return {
+    label: 'Testanruf',
+    emoji: '📞',
+    bg: 'bg-gray-50',
+    text: 'text-gray-700',
+    borderColor: 'border-gray-200',
+  }
+}
+
+function mapStatus(dbStatus: string): 'Neu' | 'In Bearbeitung' | 'Erledigt' {
+  switch (dbStatus) {
+    case 'missed':
+      return 'Neu'
+    case 'in_progress':
+      return 'In Bearbeitung'
+    case 'completed':
+      return 'Erledigt'
+    default:
+      return 'Neu'
+  }
 }
 
 const tabs = [
   { key: 'all', label: 'Alle' },
-  { key: 'completed', label: 'Abgeschlossen' },
-  { key: 'in_progress', label: 'Laufend' },
-  { key: 'missed', label: 'Verpasst' },
+  { key: 'missed', label: 'Neu' },
+  { key: 'in_progress', label: 'In Bearbeitung' },
+  { key: 'completed', label: 'Erledigt' },
+  { key: 'archived', label: 'Archiviert' },
 ]
 
 export default function AnrufePage() {
@@ -80,7 +182,9 @@ export default function AnrufePage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [showShortCalls, setShowShortCalls] = useState(false)
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null)
+  const [statusMap, setStatusMap] = useState<Record<string, 'Neu' | 'In Bearbeitung' | 'Erledigt'>>({})
 
   useEffect(() => {
     async function load() {
@@ -89,37 +193,67 @@ export default function AnrufePage() {
         .select('*')
         .order('started_at', { ascending: false })
         .limit(100)
-      setCalls((data ?? []) as Call[])
+      const calls = (data ?? []) as Call[]
+      setCalls(calls)
+
+      const initialStatus: Record<string, 'Neu' | 'In Bearbeitung' | 'Erledigt'> = {}
+      calls.forEach(c => {
+        initialStatus[c.id] = mapStatus(c.status)
+      })
+      setStatusMap(initialStatus)
       setLoading(false)
     }
     load()
   }, [])
 
   const filtered = calls.filter(c => {
-    const matchTab = activeTab === 'all' || c.status === activeTab
-    const matchSearch = !search ||
+    let matchTab = true
+    if (activeTab !== 'all') {
+      if (activeTab === 'missed') matchTab = c.status === 'missed'
+      else if (activeTab === 'in_progress') matchTab = c.status === 'in_progress'
+      else if (activeTab === 'completed') matchTab = c.status === 'completed'
+      else if (activeTab === 'archived') matchTab = false
+    }
+
+    const matchSearch =
+      !search ||
       (c.caller_number ?? '').includes(search) ||
       (c.summary ?? '').toLowerCase().includes(search.toLowerCase())
-    return matchTab && matchSearch
+
+    const matchDuration = !showShortCalls || (c.duration_sec ?? 0) >= 30
+
+    return matchTab && matchSearch && matchDuration
   })
 
+  const handleStatusToggle = (callId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const current = statusMap[callId] || 'Neu'
+    let next: 'Neu' | 'In Bearbeitung' | 'Erledigt'
+    if (current === 'Neu') next = 'In Bearbeitung'
+    else if (current === 'In Bearbeitung') next = 'Erledigt'
+    else next = 'Neu'
+    setStatusMap(prev => ({ ...prev, [callId]: next }))
+  }
+
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Anrufe</h1>
-        <p className="text-slate-400 text-sm mt-0.5">Verwalten Sie die Anrufe, die Lisa für Sie getätigt hat.</p>
+      <div className="px-8 py-6 border-b border-slate-200">
+        <h1 className="text-3xl font-bold text-slate-900">Anrufe</h1>
+        <p className="text-slate-500 text-sm mt-1">
+          Verwalten Sie die Anrufe, die ImmoGreta für Sie getätigt hat.
+        </p>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex items-center gap-1 mb-5 border-b border-slate-100">
+      <div className="px-8 flex items-center gap-8 border-b border-slate-200">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            className={`py-4 text-sm font-medium border-b-2 transition-colors ${
               activeTab === t.key
-                ? 'border-slate-800 text-slate-800'
+                ? 'border-slate-900 text-slate-900'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
@@ -128,127 +262,271 @@ export default function AnrufePage() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="relative flex-1 max-w-xs">
+      {/* Filter row */}
+      <div className="px-8 py-4 border-b border-slate-200 flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-64 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Suche..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-opacity-5 focus:border-slate-900"
           />
         </div>
-        <span className="text-sm text-slate-400">{filtered.length} Anrufe</span>
+
+        <button
+          onClick={() => setShowShortCalls(!showShortCalls)}
+          className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+            showShortCalls
+              ? 'bg-slate-100 border-slate-300 text-slate-900'
+              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          Kurze Anrufe anzeigen
+        </button>
+
+        <button className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+          Weitergeleitet an
+          <ChevronDown className="w-4 h-4" />
+        </button>
+
+        <button className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          Datum
+        </button>
+
+        <button className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+          <Filter className="w-4 h-4" />+ Filter hinzufügen
+        </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-        {/* Table header */}
-        <div className="grid grid-cols-[2fr_3fr_2fr_1fr_1fr] px-5 py-3 border-b border-slate-100 bg-slate-50">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Kontakt</span>
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Anliegen</span>
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Datum</span>
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Dauer</span>
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</span>
-        </div>
-
+      <div className="px-8 py-6">
         {loading ? (
-          <div className="py-16 text-center text-slate-300 text-sm">Lädt...</div>
+          <div className="text-center py-12 text-slate-400">Lädt...</div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center">
-            <PhoneMissed className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">Keine Anrufe gefunden</p>
-            <p className="text-slate-300 text-xs mt-1">Ruf +1 (662) 439-4944 an um den Test zu starten</p>
+          <div className="text-center py-12">
+            <Phone className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-600 text-sm">Keine Anrufe gefunden</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
-            {filtered.map(call => {
-              const tag = getCategoryTag(call.summary)
-              const isOpen = expanded === call.id
-              return (
-                <div key={call.id}>
+          <div className="space-y-1 border border-slate-200 rounded-lg overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr] px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <div>Kontakt</div>
+              <div>Aufgabe</div>
+              <div>Datum</div>
+              <div>Status</div>
+            </div>
+
+            {/* Table rows */}
+            <div>
+              {filtered.map(call => {
+                const cat = getCategory(call.summary)
+                const displayStatus = statusMap[call.id] || mapStatus(call.status)
+                return (
                   <button
-                    onClick={() => setExpanded(isOpen ? null : call.id)}
-                    className="w-full grid grid-cols-[2fr_3fr_2fr_1fr_1fr] items-center px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                    key={call.id}
+                    onClick={() => setSelectedCall(call)}
+                    className="w-full grid grid-cols-[1.5fr_2fr_1.5fr_1fr] items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
                   >
                     {/* Kontakt */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        call.status === 'missed' ? 'bg-red-50' :
-                        call.status === 'in_progress' ? 'bg-blue-50' : 'bg-slate-100'
-                      }`}>
-                        {call.status === 'missed' ? (
-                          <PhoneMissed className="w-3.5 h-3.5 text-red-400" />
-                        ) : call.status === 'in_progress' ? (
-                          <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
-                        ) : (
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        )}
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-slate-600">
+                        {call.caller_number?.[0] || 'U'}
                       </div>
-                      <span className="text-sm font-medium text-slate-700 truncate">
-                        {call.caller_number || 'Unbekannte Nummer'}
-                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">
+                          {call.contact_name || call.caller_number || 'Unbekannt'}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate">
+                          {call.caller_number}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Anliegen */}
-                    <div>
-                      <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ${tag.bg} ${tag.text}`}>
-                        {tag.label}
-                      </span>
-                      {call.summary && (
-                        <p className="text-xs text-slate-400 mt-1 truncate max-w-xs">{call.summary}</p>
-                      )}
+                    {/* Aufgabe */}
+                    <div className="flex items-start">
+                      <div
+                        className={`px-3 py-1.5 rounded-lg border ${cat.bg} ${cat.text} ${cat.borderColor} text-sm font-medium flex items-center gap-1.5`}
+                      >
+                        <span>{cat.emoji}</span>
+                        <span>{cat.label}</span>
+                      </div>
                     </div>
 
                     {/* Datum */}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                      <Clock className="w-3.5 h-3.5 text-slate-300" />
-                      {formatDate(call.started_at)}
-                    </div>
-
-                    {/* Dauer */}
-                    <span className="text-xs text-slate-500">{formatDuration(call.duration_sec)}</span>
-
-                    {/* Status + expand */}
-                    <div className="flex items-center justify-between">
-                      <StatusBadge status={call.status} />
-                      {isOpen
-                        ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" />
-                        : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />
-                      }
-                    </div>
-                  </button>
-
-                  {/* Expanded detail */}
-                  {isOpen && (
-                    <div className="px-5 pb-5 pt-2 bg-slate-50 border-t border-slate-100">
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Zusammenfassung</p>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {call.summary || <span className="italic text-slate-300">Keine Zusammenfassung verfügbar</span>}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Transkript</p>
-                          {call.transcript ? (
-                            <div className="bg-white rounded-lg p-3 border border-slate-100 max-h-36 overflow-y-auto">
-                              <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{call.transcript}</p>
-                            </div>
-                          ) : (
-                            <p className="text-sm italic text-slate-300">Kein Transkript verfügbar</p>
-                          )}
+                    <div className="flex items-start">
+                      <div className="text-sm text-slate-600">
+                        <div className="font-medium">{formatDuration(call.duration_sec)}</div>
+                        <div className="text-xs text-slate-400">
+                          {formatDate(call.started_at)}
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    {/* Status */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={displayStatus !== 'Neu'}
+                        onChange={e => handleStatusToggle(call.id, e as any)}
+                        className="w-4 h-4 rounded border-slate-300 cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-600">{displayStatus}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
+
+      {/* Right side detail panel */}
+      {selectedCall && (
+        <div className="fixed right-0 top-0 h-screen w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-auto">
+          {/* Header with close button */}
+          <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
+            <h2 className="text-lg font-semibold text-slate-900">Details</h2>
+            <button
+              onClick={() => setSelectedCall(null)}
+              className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* Time and title */}
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
+                {formatDate(selectedCall.started_at)}
+              </p>
+              <h3 className="text-xl font-semibold text-slate-900">
+                {getCategory(selectedCall.summary).label}
+              </h3>
+            </div>
+
+            {/* Duration and mood pills */}
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-700">
+                {formatDurationLong(selectedCall.duration_sec)}
+              </div>
+              <div className="px-3 py-1.5 bg-green-100 rounded-full text-sm font-medium text-green-700">
+                Ruhig
+              </div>
+            </div>
+
+            {/* Summary */}
+            {selectedCall.summary && (
+              <div>
+                <p className="text-sm text-slate-700 leading-relaxed mb-2">
+                  {selectedCall.summary}
+                </p>
+                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  Mehr anzeigen
+                </button>
+              </div>
+            )}
+
+            {/* Contact card */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center text-sm font-semibold text-slate-600">
+                  {(selectedCall.contact_name || selectedCall.caller_number || 'U')[0]}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {selectedCall.contact_name || 'Kontakt'}
+                  </p>
+                  <p className="text-xs text-slate-500">{selectedCall.caller_number}</p>
+                </div>
+              </div>
+              {selectedCall.contact_address && (
+                <p className="text-xs text-slate-600">{selectedCall.contact_address}</p>
+              )}
+            </div>
+
+            {/* Ausgeführte Aufgabe section */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                Ausgeführte Aufgabe
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-1.5 ${
+                      getCategory(selectedCall.summary).bg
+                    } ${getCategory(selectedCall.summary).text} ${
+                      getCategory(selectedCall.summary).borderColor
+                    }`}
+                  >
+                    <span>{getCategory(selectedCall.summary).emoji}</span>
+                    <span>{getCategory(selectedCall.summary).label}</span>
+                  </div>
+                </div>
+
+                {/* Task details as tags */}
+                {selectedCall.summary && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCall.summary.split(',').map((tag, idx) => (
+                      <div
+                        key={idx}
+                        className="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded-full"
+                      >
+                        {tag.trim()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Aktionen section */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                Aktionen
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Mail className="w-4 h-4 text-slate-400" />
+                  <span>E-Mail versendet</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Check className="w-4 h-4 text-slate-400" />
+                  <span>Vorlage angewendet</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <span>Weitergeleitet</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback section */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                Feedback
+              </p>
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <button
+                    key={i}
+                    className="p-1 hover:bg-slate-100 rounded transition-colors"
+                  >
+                    <Star
+                      className={`w-5 h-5 ${
+                        i < 3 ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

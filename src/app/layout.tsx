@@ -3,7 +3,7 @@ import './globals.css'
 import Sidebar from '@/components/Sidebar'
 
 export const metadata: Metadata = {
-  title: 'Lisa AI – Hausverwaltung Dashboard',
+  title: 'ImmoGreta – Hausverwaltung Dashboard',
   description: 'KI-gestützte Anrufverwaltung für Hausverwaltungen',
 }
 

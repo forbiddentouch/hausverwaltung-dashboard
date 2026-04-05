@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { Phone, Ticket, Clock, TrendingUp, ArrowRight, PhoneCall, PhoneMissed } from 'lucide-react'
+import { Phone, Ticket, Clock, TrendingUp, ArrowRight, PhoneCall, PhoneMissed, Users, ListTodo, Timer } from 'lucide-react'
 import Link from 'next/link'
 
 async function getStats() {
@@ -60,82 +60,126 @@ function PrioBadge({ prio }: { prio: string }) {
   )
 }
 
+function PulsingDot() {
+  return (
+    <span className="relative inline-flex">
+      <span className="animate-pulse w-2 h-2 bg-green-400 rounded-full" />
+    </span>
+  )
+}
+
 export default async function DashboardPage() {
   const stats = await getStats()
 
+  const today = new Date()
+  const dateString = today.toLocaleDateString('de-DE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+  const capitalizedDate = dateString.charAt(0).toUpperCase() + dateString.slice(1)
+
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Übersicht</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
-          {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
-      </div>
-
-      {/* Lisa Banner */}
-      <div className="bg-blue-600 rounded-xl px-6 py-4 mb-6 flex items-center justify-between">
+    <div className="max-w-6xl mx-auto">
+      {/* Header section with title and user icon */}
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 bg-green-400 rounded-full" />
-            <span className="text-blue-100 text-xs font-medium">Lisa ist aktiv</span>
-          </div>
-          <p className="text-white font-semibold text-base">Ihre KI-Assistentin nimmt Anrufe entgegen</p>
-          <p className="text-blue-200 text-xs mt-0.5">+1 (662) 439-4944 · Automatische Ticket-Erstellung</p>
+          <h1 className="text-3xl font-bold text-slate-900">Übersicht</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            {capitalizedDate}
+          </p>
         </div>
-        <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
-          <PhoneCall className="w-6 h-6 text-white" />
+        <button className="w-10 h-10 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+          <span className="w-5 h-5 bg-slate-400 rounded-full" />
+        </button>
+      </div>
+
+      {/* ImmoGreta status banner - blue gradient card */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-8 py-6 mb-8 flex items-center justify-between shadow-lg">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <PulsingDot />
+            <span className="text-blue-100 text-sm font-semibold">ImmoGreta ist aktiv</span>
+          </div>
+          <h2 className="text-white font-bold text-xl mb-1">Ihre KI-Assistentin nimmt Anrufe entgegen</h2>
+          <p className="text-blue-100 text-sm">+1 (662) 439-4944 · Automatische Ticket-Erstellung</p>
+        </div>
+        <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <div className="animate-bounce">
+            <PhoneCall className="w-8 h-8 text-white" />
+          </div>
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Anrufe heute', value: stats.callsToday, icon: Phone, sub: 'Lisa war aktiv', iconBg: 'bg-blue-50', iconColor: 'text-blue-500' },
-          { label: 'Offene Tickets', value: stats.openTickets, icon: Ticket, sub: 'Handlungsbedarf', iconBg: 'bg-orange-50', iconColor: 'text-orange-500' },
-          { label: 'Anrufe gesamt', value: stats.totalCalls, icon: TrendingUp, sub: 'Seit Start', iconBg: 'bg-green-50', iconColor: 'text-green-500' },
-          { label: 'Verfügbarkeit', value: '24/7', icon: Clock, sub: 'Immer erreichbar', iconBg: 'bg-violet-50', iconColor: 'text-violet-500' },
-        ].map(({ label, value, icon: Icon, sub, iconBg, iconColor }) => (
-          <div key={label} className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
-            <div className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center mb-3`}>
-              <Icon className={`w-4.5 h-4.5 ${iconColor}`} />
-            </div>
-            <p className="text-2xl font-bold text-slate-800">{value}</p>
-            <p className="text-sm font-medium text-slate-600 mt-0.5">{label}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{sub}</p>
+      {/* KPI Grid - 4 columns */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
+            <Phone className="w-5 h-5 text-blue-600" />
           </div>
-        ))}
+          <p className="text-3xl font-bold text-slate-900">{stats.callsToday}</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Anrufe heute</p>
+          <p className="text-xs text-slate-500 mt-0.5">Nur diese Woche</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center mb-4">
+            <Ticket className="w-5 h-5 text-orange-600" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">{stats.openTickets}</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Offene Tickets</p>
+          <p className="text-xs text-slate-500 mt-0.5">Handlungsbedarf</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-4">
+            <TrendingUp className="w-5 h-5 text-green-600" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">{stats.totalCalls}</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Anrufe gesamt</p>
+          <p className="text-xs text-slate-500 mt-0.5">Seit Start</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center mb-4">
+            <Clock className="w-5 h-5 text-violet-600" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">24/7</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Verfügbarkeit</p>
+          <p className="text-xs text-slate-500 mt-0.5">Immer erreichbar</p>
+        </div>
       </div>
 
       {/* Two column layout */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-6 mb-8">
         {/* Recent calls */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700">Letzte Anrufe</h2>
-            <Link href="/anrufe" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5 font-medium">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900">Letzte Anrufe</h2>
+            <Link href="/anrufe" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-semibold">
               Alle anzeigen <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
           {stats.recentCalls.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <PhoneMissed className="w-8 h-8 text-slate-150 mx-auto mb-2" />
-              <p className="text-slate-300 text-sm">Noch keine Anrufe</p>
-              <p className="text-slate-200 text-xs mt-0.5">Ruf +1 (662) 439-4944 an</p>
+            <div className="px-6 py-12 text-center">
+              <PhoneMissed className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-600 text-sm font-medium">Noch keine Anrufe</p>
+              <p className="text-slate-400 text-xs mt-1">Ruf +1 (662) 439-4944 an</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100">
               {stats.recentCalls.map((call) => (
-                <div key={call.id as string} className="px-5 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                <div key={call.id as string} className="px-6 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors">
                   <CallStatusDot status={call.status as string} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-700 font-medium truncate">
+                    <p className="text-sm font-medium text-slate-900 truncate">
                       {(call.caller_number as string) || 'Unbekannte Nummer'}
                     </p>
-                    <p className="text-xs text-slate-400">{formatTime(call.started_at as string)}</p>
+                    <p className="text-xs text-slate-500">{formatTime(call.started_at as string)}</p>
                   </div>
-                  <span className="text-xs text-slate-400">{formatDuration(call.duration_sec as number | null)}</span>
+                  <span className="text-xs text-slate-500 flex-shrink-0">{formatDuration(call.duration_sec as number | null)}</span>
                 </div>
               ))}
             </div>
@@ -143,32 +187,65 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent tickets */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700">Offene Tickets</h2>
-            <Link href="/tickets" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5 font-medium">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900">Neueste Tickets</h2>
+            <Link href="/tickets" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-semibold">
               Alle anzeigen <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
           {stats.recentTickets.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <Ticket className="w-8 h-8 text-slate-150 mx-auto mb-2" />
-              <p className="text-slate-300 text-sm">Keine offenen Tickets</p>
+            <div className="px-6 py-12 text-center">
+              <Ticket className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-600 text-sm font-medium">Keine offenen Tickets</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100">
               {stats.recentTickets.map((ticket) => (
-                <div key={ticket.id as string} className="px-5 py-3.5 flex items-start gap-3 hover:bg-slate-50 transition-colors">
+                <div key={ticket.id as string} className="px-6 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex-shrink-0 text-lg">
+                    {ticket.kategorie === 'Reparatur' && '🔧'}
+                    {ticket.kategorie === 'Wartung' && '🛠️'}
+                    {ticket.kategorie === 'Anfrage' && '❓'}
+                    {ticket.kategorie === 'Beschwerde' && '⚠️'}
+                    {!['Reparatur', 'Wartung', 'Anfrage', 'Beschwerde'].includes(ticket.kategorie as string) && '📋'}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-700 font-medium truncate">{ticket.kategorie as string}</p>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{(ticket.beschreibung as string) || '—'}</p>
+                    <p className="text-sm font-medium text-slate-900">{ticket.kategorie as string}</p>
                   </div>
                   <PrioBadge prio={ticket.prioritaet as string} />
                 </div>
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Bottom quick stats - 3 columns */}
+      <div className="grid grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
+            <Users className="w-5 h-5 text-blue-600" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">3</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Aktive Mitarbeiter</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-4">
+            <ListTodo className="w-5 h-5 text-purple-600" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">8</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Konfigurierte Aufgaben</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-4">
+            <Timer className="w-5 h-5 text-green-600" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">2:34 min</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1">Ø Gesprächsdauer</p>
         </div>
       </div>
     </div>
