@@ -1,303 +1,509 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Search, Plus, Mail, Phone, CheckCircle2, Circle, X } from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { Mail, Phone, X, Plus, Edit2, Trash2, Check } from 'lucide-react';
 
 interface Staff {
-  id: string
-  vorname: string
-  nachname: string
-  email: string
-  telefon: string
-  themen: string[]
-  erreichbar: boolean
+  id: string;
+  vorname: string;
+  nachname: string;
+  email: string;
+  telefon: string;
+  themen: string[];
+  erreichbar: boolean;
+  createdAt: string;
 }
 
-const initialStaff: Staff[] = [
+interface Toast {
+  id: string;
+  message: string;
+}
+
+const TOPIC_OPTIONS = [
+  { label: 'Heizung', color: 'bg-orange-100 text-orange-800' },
+  { label: 'Notfall', color: 'bg-red-100 text-red-800' },
+  { label: 'Allgemein', color: 'bg-blue-100 text-blue-800' },
+  { label: 'Neukunden', color: 'bg-green-100 text-green-800' },
+  { label: 'Wartung', color: 'bg-purple-100 text-purple-800' },
+  { label: 'Sonstiges', color: 'bg-gray-100 text-gray-800' },
+];
+
+const AVATAR_COLORS = [
+  'bg-blue-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-red-500',
+  'bg-orange-500',
+  'bg-yellow-500',
+  'bg-green-500',
+  'bg-teal-500',
+];
+
+const SEED_DATA: Staff[] = [
   {
     id: '1',
     vorname: 'Max',
     nachname: 'Mustermann',
-    email: 'max@example.com',
-    telefon: '0151 234567',
+    email: 'max.mustermann@hausverwaltung.de',
+    telefon: '+49 30 123456789',
     themen: ['Heizung', 'Notfall'],
     erreichbar: true,
+    createdAt: new Date().toISOString(),
   },
   {
     id: '2',
     vorname: 'Anna',
     nachname: 'Schmidt',
-    email: 'anna@example.com',
-    telefon: '0172 345678',
+    email: 'anna.schmidt@hausverwaltung.de',
+    telefon: '+49 30 987654321',
     themen: ['Allgemein', 'Neukunden'],
     erreichbar: true,
+    createdAt: new Date().toISOString(),
   },
   {
     id: '3',
     vorname: 'Tom',
     nachname: 'Weber',
-    email: 'tom@example.com',
-    telefon: '0160 456789',
-    themen: ['Wartung'],
+    email: 'tom.weber@hausverwaltung.de',
+    telefon: '+49 30 555666777',
+    themen: ['Wartung', 'Sonstiges'],
     erreichbar: false,
+    createdAt: new Date().toISOString(),
   },
-]
+];
 
-const allThemen = ['Heizung', 'Notfall', 'Allgemein', 'Neukunden', 'Wartung', 'Sonstiges']
+function getAvatarColor(id: string): string {
+  const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
 
-const themaColors: Record<string, string> = {
-  Heizung: 'bg-orange-50 text-orange-700',
-  Notfall: 'bg-red-50 text-red-700',
-  Allgemein: 'bg-blue-50 text-blue-700',
-  Neukunden: 'bg-green-50 text-green-700',
-  Wartung: 'bg-purple-50 text-purple-700',
-  Sonstiges: 'bg-slate-50 text-slate-700',
+function getInitials(vorname: string, nachname: string): string {
+  return `${vorname[0]}${nachname[0]}`.toUpperCase();
+}
+
+function getTopicColor(topic: string): string {
+  const topicOption = TOPIC_OPTIONS.find((t) => t.label === topic);
+  return topicOption?.color || 'bg-gray-100 text-gray-800';
 }
 
 export default function MitarbeiterPage() {
-  const [staff, setStaff] = useState<Staff[]>(initialStaff)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [formData, setFormData] = useState({
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<Partial<Staff>>({
     vorname: '',
     nachname: '',
     email: '',
     telefon: '',
-    themen: [] as string[],
+    themen: [],
     erreichbar: true,
-  })
+  });
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('immogreta_mitarbeiter');
+    if (stored) {
+      try {
+        setStaff(JSON.parse(stored));
+      } catch {
+        setStaff(SEED_DATA);
+      }
+    } else {
+      setStaff(SEED_DATA);
+    }
+  }, []);
+
+  // Save to localStorage on change
+  useEffect(() => {
+    if (staff.length > 0) {
+      localStorage.setItem('immogreta_mitarbeiter', JSON.stringify(staff));
+    }
+  }, [staff]);
+
+  const showToast = (message: string) => {
+    const id = Math.random().toString();
+    setToasts((prev) => [...prev, { id, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 2500);
+  };
 
   const filteredStaff = staff.filter(
-    (s) =>
-      `${s.vorname} ${s.nachname}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+    (person) =>
+      `${person.vorname} ${person.nachname}`
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      person.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleAddStaff = () => {
-    if (formData.vorname && formData.nachname && formData.email && formData.telefon) {
-      const newStaff: Staff = {
-        id: Date.now().toString(),
-        vorname: formData.vorname,
-        nachname: formData.nachname,
-        email: formData.email,
-        telefon: formData.telefon,
-        themen: formData.themen,
-        erreichbar: formData.erreichbar,
-      }
-      setStaff([...staff, newStaff])
-      setFormData({
-        vorname: '',
-        nachname: '',
-        email: '',
-        telefon: '',
-        themen: [],
-        erreichbar: true,
-      })
-      setIsModalOpen(false)
+  const resetForm = () => {
+    setFormData({
+      vorname: '',
+      nachname: '',
+      email: '',
+      telefon: '',
+      themen: [],
+      erreichbar: true,
+    });
+    setEditingId(null);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (person: Staff) => {
+    setFormData(person);
+    setEditingId(person.id);
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!formData.vorname || !formData.nachname || !formData.email || !formData.telefon) {
+      showToast('Bitte alle erforderlichen Felder ausfüllen');
+      return;
     }
-  }
 
-  const handleThemaToggle = (thema: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      themen: prev.themen.includes(thema)
-        ? prev.themen.filter((t) => t !== thema)
-        : [...prev.themen, thema],
-    }))
-  }
+    if (editingId) {
+      setStaff((prev) =>
+        prev.map((p) =>
+          p.id === editingId ? { ...p, ...formData } : p
+        )
+      );
+      showToast('Gespeichert');
+    } else {
+      const newStaff: Staff = {
+        ...(formData as Omit<Staff, 'id' | 'createdAt'>),
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+      };
+      setStaff((prev) => [...prev, newStaff]);
+      showToast('Gespeichert');
+    }
 
-  const getInitials = (vorname: string, nachname: string) => {
-    return `${vorname.charAt(0)}${nachname.charAt(0)}`.toUpperCase()
-  }
+    resetForm();
+    setIsModalOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    setStaff((prev) => prev.filter((p) => p.id !== id));
+    setDeleteConfirm(null);
+    showToast('Gelöscht');
+  };
+
+  const toggleTopic = (topic: string) => {
+    setFormData((prev) => {
+      const themen = prev.themen || [];
+      if (themen.includes(topic)) {
+        return { ...prev, themen: themen.filter((t) => t !== topic) };
+      } else {
+        return { ...prev, themen: [...themen, topic] };
+      }
+    });
+  };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Mitarbeiter</h1>
-        <p className="text-slate-600 text-sm mt-1">
-          Legen Sie Ihre Mitarbeiter an, damit ImmoGreta Ihre Anliegen kennt, Anrufe gezielt weiterleiten kann und
-          Benachrichtigungen direkt an die richtige Person gehen.
-        </p>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Mitarbeiter</h1>
+        <p className="mt-2 text-gray-600">Verwaltung des Hausverwaltungs-Teams</p>
       </div>
 
-      {/* Top Bar */}
-      <div className="flex gap-3 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* Search and Add Button */}
+      <div className="flex gap-4 items-center">
+        <div className="flex-1">
           <input
             type="text"
-            placeholder="Nach Name oder E-Mail suchen..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+            placeholder="Nach Name oder Email suchen..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          onClick={openAddModal}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <Plus size={20} />
           Mitarbeiter erstellen
         </button>
       </div>
 
-      {/* Staff Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        {filteredStaff.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-slate-500">Keine Mitarbeiter gefunden</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {filteredStaff.map((member) => (
-              <div key={member.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-                {/* Name Column */}
-                <div className="flex-1 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-semibold text-blue-700">{getInitials(member.vorname, member.nachname)}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800">{`${member.vorname} ${member.nachname}`}</p>
-                    <p className="text-xs text-slate-500">{member.email}</p>
-                  </div>
-                </div>
-
-                {/* Kontakt Column */}
-                <div className="w-32 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-slate-400" />
-                    <p className="text-sm text-slate-600">{member.telefon}</p>
-                  </div>
-                </div>
-
-                {/* Themen Column */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap gap-1">
-                    {member.themen.map((thema) => (
-                      <span
-                        key={thema}
-                        className={`px-2 py-1 rounded text-xs font-medium ${themaColors[thema] || 'bg-slate-50 text-slate-600'}`}
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Kontakt</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Themen</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {filteredStaff.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  Keine Mitarbeiter gefunden
+                </td>
+              </tr>
+            ) : (
+              filteredStaff.map((person) => (
+                <tr key={person.id} className="hover:bg-gray-50 transition-colors">
+                  {/* Avatar + Name + Email */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`${getAvatarColor(
+                          person.id
+                        )} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm`}
                       >
-                        {thema}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                        {getInitials(person.vorname, person.nachname)}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {person.vorname} {person.nachname}
+                        </div>
+                        <div className="text-sm text-gray-600 flex items-center gap-1">
+                          <Mail size={14} />
+                          {person.email}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
 
-                {/* Status Column */}
-                <div className="w-24 flex items-center gap-2 flex-shrink-0">
-                  {member.erreichbar ? (
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      <span className="text-sm text-slate-600">erreichbar</span>
+                  {/* Phone */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1 text-gray-700">
+                      <Phone size={16} />
+                      <span className="text-sm">{person.telefon}</span>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-slate-300" />
-                      <span className="text-sm text-slate-500">nicht erreichbar</span>
+                  </td>
+
+                  {/* Topics */}
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {person.themen.length === 0 ? (
+                        <span className="text-sm text-gray-500">Keine Themen</span>
+                      ) : (
+                        person.themen.map((topic) => (
+                          <span
+                            key={topic}
+                            className={`inline-block px-2 py-1 text-xs font-medium rounded ${getTopicColor(
+                              topic
+                            )}`}
+                          >
+                            {topic}
+                          </span>
+                        ))
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          person.erreichbar ? 'bg-green-500' : 'bg-gray-400'
+                        }`}
+                      />
+                      <span className="text-sm text-gray-700">
+                        {person.erreichbar ? 'Erreichbar' : 'Nicht erreichbar'}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-6 py-4">
+                    {deleteConfirm === person.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700">Löschen?</span>
+                        <button
+                          onClick={() => handleDelete(person.id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                        >
+                          <Check size={14} />
+                          Ja
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
+                        >
+                          <X size={14} />
+                          Nein
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => openEditModal(person)}
+                          className="inline-flex items-center gap-1 px-3 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(person.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Mitarbeiter erstellen</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {editingId ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter'}
+              </h2>
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetForm();
+                }}
+                className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-5 h-5" />
+                <X size={24} />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              {/* Vorname */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Vorname *
+                </label>
                 <input
                   type="text"
-                  placeholder="Vorname"
-                  value={formData.vorname}
+                  value={formData.vorname || ''}
                   onChange={(e) => setFormData({ ...formData, vorname: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
-                />
-                <input
-                  type="text"
-                  placeholder="Nachname"
-                  value={formData.nachname}
-                  onChange={(e) => setFormData({ ...formData, nachname: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              <input
-                type="email"
-                placeholder="E-Mail"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
-              />
-
-              <input
-                type="tel"
-                placeholder="Telefon"
-                value={formData.telefon}
-                onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
-              />
-
+              {/* Nachname */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Themen</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nachname *
+                </label>
+                <input
+                  type="text"
+                  value={formData.nachname || ''}
+                  onChange={(e) => setFormData({ ...formData, nachname: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={formData.email || ''}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Telefon */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefon *
+                </label>
+                <input
+                  type="tel"
+                  value={formData.telefon || ''}
+                  onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Topics */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Themen
+                </label>
                 <div className="space-y-2">
-                  {allThemen.map((thema) => (
-                    <label key={thema} className="flex items-center gap-2">
+                  {TOPIC_OPTIONS.map((topic) => (
+                    <label key={topic.label} className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={formData.themen.includes(thema)}
-                        onChange={() => handleThemaToggle(thema)}
-                        className="w-4 h-4 border border-slate-300 rounded text-blue-600 focus:ring-0"
+                        checked={(formData.themen || []).includes(topic.label)}
+                        onChange={() => toggleTopic(topic.label)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-sm text-slate-700">{thema}</span>
+                      <span className="text-sm text-gray-700">{topic.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.erreichbar}
-                  onChange={(e) => setFormData({ ...formData, erreichbar: e.target.checked })}
-                  className="w-4 h-4 border border-slate-300 rounded text-blue-600 focus:ring-0"
-                />
-                <span className="text-sm text-slate-700">Erreichbar</span>
-              </label>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={handleAddStaff}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Erstellen
-                </button>
+              {/* Erreichbar */}
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.erreichbar || false}
+                    onChange={(e) => setFormData({ ...formData, erreichbar: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Erreichbar</span>
+                </label>
               </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetForm();
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Speichern
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Toasts */}
+      <div className="fixed bottom-4 right-4 space-y-2 z-40">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm animate-fade-in"
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
     </div>
-  )
+  );
 }
