@@ -23,13 +23,19 @@ export default function LoginPage() {
 
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) throw signInError
+        if (!data.session) {
+          throw new Error('Keine Session erhalten. Bitte versuchen Sie es erneut.')
+        }
+        // Short delay to ensure cookies are set before redirect
+        await new Promise(resolve => setTimeout(resolve, 300))
         window.location.href = '/'
       } else if (mode === 'register') {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) throw error
+        const { error: signUpError } = await supabase.auth.signUp({ email, password })
+        if (signUpError) throw signUpError
         setSuccess('Bestätigungs-E-Mail wurde gesendet. Bitte prüfen Sie Ihr Postfach.')
+        setLoading(false)
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten'
@@ -42,7 +48,6 @@ export default function LoginPage() {
       } else {
         setError(msg)
       }
-    } finally {
       setLoading(false)
     }
   }
@@ -55,7 +60,7 @@ export default function LoginPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: 'https://hausverwaltung-dashboard.vercel.app/reset-password',
+        redirectTo: `${window.location.origin}/reset-password`,
       })
       if (error) throw error
       setSuccess('Passwort-Zurücksetzen E-Mail wurde versendet. Bitte prüfen Sie Ihr Postfach.')
@@ -137,7 +142,7 @@ export default function LoginPage() {
                       Wird versendet...
                     </>
                   ) : (
-                    'Zurücksetzen-Link versendet'
+                    'Zurücksetzen-Link senden'
                   )}
                 </button>
               </form>
@@ -192,6 +197,7 @@ export default function LoginPage() {
                       onChange={e => setEmail(e.target.value)}
                       placeholder="name@unternehmen.de"
                       required
+                      autoComplete="email"
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -209,6 +215,7 @@ export default function LoginPage() {
                       placeholder={mode === 'register' ? 'Mindestens 6 Zeichen' : '••••••••'}
                       required
                       minLength={6}
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                       className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <button
