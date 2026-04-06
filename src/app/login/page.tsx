@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowLeft } from 'lucide-react'
 
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [resetEmail, setResetEmail] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
+  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,9 +30,7 @@ export default function LoginPage() {
         if (!data.session) {
           throw new Error('Keine Session erhalten. Bitte versuchen Sie es erneut.')
         }
-        // Short delay to ensure cookies are set before redirect
-        await new Promise(resolve => setTimeout(resolve, 300))
-        window.location.href = '/'
+        router.replace('/')
       } else if (mode === 'register') {
         const { error: signUpError } = await supabase.auth.signUp({ email, password })
         if (signUpError) throw signUpError
