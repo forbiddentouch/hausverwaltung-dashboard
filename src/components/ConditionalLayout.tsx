@@ -6,8 +6,9 @@ import Sidebar from './Sidebar'
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isLoginPage = pathname === '/login'
+  const isOnboardingPage = pathname === '/onboarding'
 
-  if (isLoginPage) {
+  if (isLoginPage || isOnboardingPage) {
     return <>{children}</>
   }
 

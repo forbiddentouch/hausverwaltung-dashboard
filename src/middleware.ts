@@ -26,11 +26,18 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Allow login page always
+  // Public routes – always accessible
   if (pathname.startsWith('/login')) {
-    // If already logged in, redirect to dashboard
     if (user) {
       return NextResponse.redirect(new URL('/', request.url))
+    }
+    return supabaseResponse
+  }
+
+  // Onboarding is accessible for logged-in users without an org
+  if (pathname.startsWith('/onboarding')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
     return supabaseResponse
   }
@@ -38,6 +45,18 @@ export async function middleware(request: NextRequest) {
   // Protect all other routes
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // Check if user has an organization – if not, redirect to onboarding
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (!membership) {
+    return NextResponse.redirect(new URL('/onboarding', request.url))
   }
 
   return supabaseResponse
