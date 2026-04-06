@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote, Download, Upload } from 'lucide-react'
+import { supabase, getOrganizationId } from '@/lib/supabase'
 
 interface Contact {
   id: string
@@ -43,7 +44,7 @@ function generateId(): string {
   return 'k_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
 }
 
-function loadContacts(): Contact[] {
+function loadLocalContacts(): Contact[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? JSON.parse(raw) : []
@@ -52,11 +53,30 @@ function loadContacts(): Contact[] {
   }
 }
 
-function saveContacts(contacts: Contact[]) {
+function saveLocalContacts(contacts: Contact[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts))
   } catch {
     console.error('Fehler beim Speichern')
+  }
+}
+
+// Map Supabase tenant row to Contact
+function tenantToContact(t: Record<string, unknown>): Contact {
+  const name = (t.name as string) || ''
+  const parts = name.split(' ')
+  return {
+    id: t.id as string,
+    vorname: parts[0] || '',
+    nachname: parts.slice(1).join(' ') || '',
+    telefon: (t.telefon as string) || (t.phone_number as string) || '',
+    email: (t.email as string) || '',
+    strasse: (t.strasse as string) || '',
+    hausnummer: (t.hausnummer as string) || '',
+    plz: (t.plz as string) || '',
+    stadt: (t.stadt as string) || '',
+    notizen: (t.notizen as string) || '',
+    createdAt: (t.created_at as string) || new Date().toISOString(),
   }
 }
 
@@ -340,43 +360,107 @@ export default function KontaktePage() {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined)
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null)
+  const [useDB, setUseDB] = useState(false)
+  const [orgId, setOrgId] = useState<string | null>(null)
+
+  const loadFromSupabase = useCallback(async () => {
+    try {
+      const oid = await getOrganizationId()
+      if (!oid) {
+        setContacts(loadLocalContacts())
+        return
+      }
+      setOrgId(oid)
+      setUseDB(true)
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('organization_id', oid)
+        .order('name')
+      if (error) throw error
+      setContacts((data || []).map(tenantToContact))
+    } catch {
+      setContacts(loadLocalContacts())
+    }
+  }, [])
 
   useEffect(() => {
-    setContacts(loadContacts())
-  }, [])
+    loadFromSupabase()
+  }, [loadFromSupabase])
 
   function showFeedback(msg: string) {
     setSavedFeedback(msg)
     setTimeout(() => setSavedFeedback(null), 2500)
   }
 
-  function handleAddContact(data: typeof emptyForm) {
-    const newContact: Contact = { id: generateId(), ...data, createdAt: new Date().toISOString() }
-    const updated = [...contacts, newContact].sort((a, b) =>
-      (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
-    setContacts(updated)
-    saveContacts(updated)
+  async function handleAddContact(data: typeof emptyForm) {
+    if (useDB && orgId) {
+      const { data: inserted, error } = await supabase.from('tenants').insert({
+        organization_id: orgId,
+        name: `${data.vorname} ${data.nachname}`.trim(),
+        telefon: data.telefon || null,
+        email: data.email || null,
+        strasse: data.strasse || null,
+        hausnummer: data.hausnummer || null,
+        plz: data.plz || null,
+        stadt: data.stadt || null,
+        notizen: data.notizen || null,
+      }).select().single()
+      if (!error && inserted) {
+        setContacts(prev => [...prev, tenantToContact(inserted)].sort((a, b) =>
+          (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname)))
+      }
+    } else {
+      const newContact: Contact = { id: generateId(), ...data, createdAt: new Date().toISOString() }
+      const updated = [...contacts, newContact].sort((a, b) =>
+        (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+      setContacts(updated)
+      saveLocalContacts(updated)
+    }
     setModalOpen(false)
     showFeedback('Kontakt angelegt')
   }
 
-  function handleEditContact(data: typeof emptyForm) {
+  async function handleEditContact(data: typeof emptyForm) {
     if (!editingContact) return
-    const updated = contacts.map(c => c.id === editingContact.id ? { ...c, ...data } : c)
-      .sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
-    setContacts(updated)
-    saveContacts(updated)
-    const updatedContact = updated.find(c => c.id === editingContact.id)
-    if (updatedContact) setSelectedContact(updatedContact)
+    if (useDB && orgId) {
+      const { error } = await supabase.from('tenants').update({
+        name: `${data.vorname} ${data.nachname}`.trim(),
+        telefon: data.telefon || null,
+        email: data.email || null,
+        strasse: data.strasse || null,
+        hausnummer: data.hausnummer || null,
+        plz: data.plz || null,
+        stadt: data.stadt || null,
+        notizen: data.notizen || null,
+      }).eq('id', editingContact.id)
+      if (!error) {
+        setContacts(prev => prev.map(c => c.id === editingContact.id
+          ? { ...c, ...data }
+          : c).sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname)))
+        const updatedContact = { ...editingContact, ...data }
+        setSelectedContact(updatedContact)
+      }
+    } else {
+      const updated = contacts.map(c => c.id === editingContact.id ? { ...c, ...data } : c)
+        .sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+      setContacts(updated)
+      saveLocalContacts(updated)
+      const updatedContact = updated.find(c => c.id === editingContact.id)
+      if (updatedContact) setSelectedContact(updatedContact)
+    }
     setModalOpen(false)
     showFeedback('Änderungen gespeichert')
   }
 
-  function handleDeleteContact() {
+  async function handleDeleteContact() {
     if (!selectedContact) return
+    if (useDB && orgId) {
+      await supabase.from('tenants').delete().eq('id', selectedContact.id)
+    }
     const updated = contacts.filter(c => c.id !== selectedContact.id)
     setContacts(updated)
-    saveContacts(updated)
+    if (!useDB) saveLocalContacts(updated)
     setSelectedContact(null)
     showFeedback('Kontakt gelöscht')
   }
@@ -397,26 +481,12 @@ export default function KontaktePage() {
   function handleCSVExport() {
     const headers = ['Vorname', 'Nachname', 'Telefon', 'E-Mail', 'Straße', 'Hausnummer', 'PLZ', 'Stadt', 'Notizen']
     const rows = contacts.map(c => [
-      c.vorname,
-      c.nachname,
-      c.telefon,
-      c.email,
-      c.strasse,
-      c.hausnummer,
-      c.plz,
-      c.stadt,
-      c.notizen,
+      c.vorname, c.nachname, c.telefon, c.email, c.strasse, c.hausnummer, c.plz, c.stadt, c.notizen,
     ])
-
-    // Escape and format CSV
     const csvContent = [
       headers.map(h => `"${h}"`).join(','),
-      ...rows.map(row =>
-        row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
-      ),
+      ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
-
-    // Download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
@@ -429,12 +499,12 @@ export default function KontaktePage() {
     showFeedback('Kontakte exportiert')
   }
 
-  function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
     const reader = new FileReader()
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const csv = event.target?.result as string
         const lines = csv.split('\n').filter(line => line.trim())
@@ -444,7 +514,6 @@ export default function KontaktePage() {
           return
         }
 
-        // Parse CSV (simple parser, handles basic cases)
         const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
         const vorNameIndex = headers.findIndex(h => h.includes('vorname'))
         const nachNameIndex = headers.findIndex(h => h.includes('nachname'))
@@ -461,12 +530,10 @@ export default function KontaktePage() {
 
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''))
-
           if (!values[vorNameIndex]?.trim() || !values[nachNameIndex]?.trim()) {
             errorCount++
             continue
           }
-
           newContacts.push({
             id: generateId(),
             vorname: values[vorNameIndex] || '',
@@ -483,10 +550,26 @@ export default function KontaktePage() {
         }
 
         if (newContacts.length > 0) {
-          const updated = [...contacts, ...newContacts].sort((a, b) =>
-            (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
-          setContacts(updated)
-          saveContacts(updated)
+          if (useDB && orgId) {
+            const rows = newContacts.map(c => ({
+              organization_id: orgId,
+              name: `${c.vorname} ${c.nachname}`.trim(),
+              telefon: c.telefon || null,
+              email: c.email || null,
+              strasse: c.strasse || null,
+              hausnummer: c.hausnummer || null,
+              plz: c.plz || null,
+              stadt: c.stadt || null,
+              notizen: c.notizen || null,
+            }))
+            await supabase.from('tenants').insert(rows)
+            await loadFromSupabase()
+          } else {
+            const updated = [...contacts, ...newContacts].sort((a, b) =>
+              (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+            setContacts(updated)
+            saveLocalContacts(updated)
+          }
           showFeedback(`${newContacts.length} Kontakte importiert` + (errorCount > 0 ? ` (${errorCount} übersprungen)` : ''))
         } else {
           showFeedback('Keine gültigen Kontakte zum Importieren gefunden')
@@ -497,7 +580,6 @@ export default function KontaktePage() {
       }
     }
     reader.readAsText(file)
-    // Reset input so same file can be imported again
     e.target.value = ''
   }
 
@@ -543,12 +625,7 @@ export default function KontaktePage() {
           <label className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
             <Upload className="w-4 h-4" />
             CSV importieren
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleCSVImport}
-              className="hidden"
-            />
+            <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" />
           </label>
         </div>
       </div>

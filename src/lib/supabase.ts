@@ -15,6 +15,7 @@ export type Call = {
   transcript: string | null
   summary: string | null
   tenant_id: string
+  organization_id?: string
 }
 
 export type Ticket = {
@@ -27,10 +28,79 @@ export type Ticket = {
   quelle: string
   erstellt_am: string
   mieter_id: string | null
+  organization_id?: string
 }
 
 export type Tenant = {
   id: string
   name: string
   phone_number: string | null
+  email: string | null
+  telefon: string | null
+  strasse: string | null
+  hausnummer: string | null
+  plz: string | null
+  stadt: string | null
+  notizen: string | null
+  organization_id?: string
+}
+
+export type Mitarbeiter = {
+  id: string
+  vorname: string
+  nachname: string
+  email: string | null
+  telefon: string | null
+  themen: string[]
+  erreichbar: boolean
+  created_at: string
+  organization_id?: string
+}
+
+export type KalenderTermin = {
+  id: string
+  name: string
+  telefon: string | null
+  datum: string
+  uhrzeit: string
+  typ: string
+  notizen: string | null
+  erledigt: boolean
+  created_at: string
+  organization_id?: string
+}
+
+export type Aufgabe = {
+  id: string
+  icon: string
+  name: string
+  description: string | null
+  enabled: boolean
+  color: string
+  sort_order: number
+  created_at: string
+  organization_id?: string
+}
+
+let cachedOrgId: string | null = null
+
+export async function getOrganizationId(): Promise<string | null> {
+  if (cachedOrgId) return cachedOrgId
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data } = await supabase
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .single()
+
+  cachedOrgId = data?.organization_id ?? null
+  return cachedOrgId
+}
+
+export function clearOrgIdCache() {
+  cachedOrgId = null
 }
