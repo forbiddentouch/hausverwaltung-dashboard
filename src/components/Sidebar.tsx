@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   ChevronRight,
@@ -62,16 +61,14 @@ export default function Sidebar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
             {/* Avatar image */}
-            <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-              <Image
-                src="/greta-avatar.png"
+            <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/greta-avatar.svg"
                 alt="ImmoGreta"
                 width={36}
                 height={36}
                 className="w-full h-full object-cover object-top"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none'
-                }}
               />
             </div>
             <div className="min-w-0 flex-1">

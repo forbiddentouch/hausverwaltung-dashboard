@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0e6d8"/>
+      <stop offset="100%" style="stop-color:#e8d5bf"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="url(#bg)"/>
+  <!-- Jacket / body -->
+  <ellipse cx="60" cy="105" rx="38" ry="28" fill="#c49a6c"/>
+  <!-- Neck -->
+  <rect x="52" y="78" width="16" height="14" rx="6" fill="#f5c5a3"/>
+  <!-- White shirt collar -->
+  <polygon points="52,82 60,95 68,82 64,80 60,92 56,80" fill="white"/>
+  <!-- Head -->
+  <ellipse cx="60" cy="62" rx="26" ry="28" fill="#f5c5a3"/>
+  <!-- Hair top/back (brown) -->
+  <ellipse cx="60" cy="44" rx="27" ry="20" fill="#5c3317"/>
+  <!-- Hair side left -->
+  <ellipse cx="36" cy="64" rx="10" ry="18" fill="#5c3317"/>
+  <!-- Hair side right -->
+  <ellipse cx="84" cy="64" rx="10" ry="18" fill="#5c3317"/>
+  <!-- Hair bottom curl left -->
+  <ellipse cx="40" cy="80" rx="8" ry="6" fill="#5c3317"/>
+  <!-- Hair bottom curl right -->
+  <ellipse cx="80" cy="80" rx="8" ry="6" fill="#5c3317"/>
+  <!-- Face – cover hair overlap -->
+  <ellipse cx="60" cy="65" rx="22" ry="24" fill="#f5c5a3"/>
+  <!-- Eyes -->
+  <circle cx="51" cy="61" r="5" fill="white"/>
+  <circle cx="69" cy="61" r="5" fill="white"/>
+  <circle cx="52" cy="62" r="3.5" fill="#5c3317"/>
+  <circle cx="70" cy="62" r="3.5" fill="#5c3317"/>
+  <circle cx="52" cy="62" r="1.5" fill="#1a0a00"/>
+  <circle cx="70" cy="62" r="1.5" fill="#1a0a00"/>
+  <!-- Eyebrows -->
+  <path d="M46 54 Q52 51 57 53" stroke="#3d1f0a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M63 53 Q68 51 74 54" stroke="#3d1f0a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Smile -->
+  <path d="M52 74 Q60 80 68 74" stroke="#c07060" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Cheeks blush -->
+  <ellipse cx="45" cy="70" rx="7" ry="4" fill="#f0a090" opacity="0.35"/>
+  <ellipse cx="75" cy="70" rx="7" ry="4" fill="#f0a090" opacity="0.35"/>
+</svg>
