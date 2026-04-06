@@ -107,8 +107,8 @@ export default function Sidebar() {
         <div className="mb-6">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-3">Menu</p>
           <div className="space-y-1">
-            {menuItems.map(({ href, label, icon, badge }) => (
-              <NavLink key={href} href={href} label={label} icon={icon} badge={badge} />
+            {menuItems.map(({ href, label, icon }) => (
+              <NavLink key={href} href={href} label={label} icon={icon} />
             ))}
           </div>
         </div>

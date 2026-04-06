@@ -275,7 +275,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-900 truncate">{ticket.kategorie as string}</p>
-                    {ticket.beschreibung && <p className="text-xs text-slate-500 truncate">{ticket.beschreibung as string}</p>}
+                    {ticket.beschreibung ? <p className="text-xs text-slate-500 truncate">{String(ticket.beschreibung)}</p> : null}
                   </div>
                   <PrioBadge prio={ticket.prioritaet as string} />
                 </div>
