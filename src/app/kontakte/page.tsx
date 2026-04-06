@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote, Download, Upload } from 'lucide-react'
 
 interface Contact {
   id: string
@@ -394,6 +394,113 @@ export default function KontaktePage() {
     setModalOpen(true)
   }
 
+  function handleCSVExport() {
+    const headers = ['Vorname', 'Nachname', 'Telefon', 'E-Mail', 'Straße', 'Hausnummer', 'PLZ', 'Stadt', 'Notizen']
+    const rows = contacts.map(c => [
+      c.vorname,
+      c.nachname,
+      c.telefon,
+      c.email,
+      c.strasse,
+      c.hausnummer,
+      c.plz,
+      c.stadt,
+      c.notizen,
+    ])
+
+    // Escape and format CSV
+    const csvContent = [
+      headers.map(h => `"${h}"`).join(','),
+      ...rows.map(row =>
+        row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
+      ),
+    ].join('\n')
+
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `kontakte_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    showFeedback('Kontakte exportiert')
+  }
+
+  function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const csv = event.target?.result as string
+        const lines = csv.split('\n').filter(line => line.trim())
+
+        if (lines.length < 2) {
+          showFeedback('CSV ist leer oder ungültig')
+          return
+        }
+
+        // Parse CSV (simple parser, handles basic cases)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+        const vorNameIndex = headers.findIndex(h => h.includes('vorname'))
+        const nachNameIndex = headers.findIndex(h => h.includes('nachname'))
+        const telefonIndex = headers.findIndex(h => h.includes('telefon'))
+        const emailIndex = headers.findIndex(h => h.includes('e-mail') || h.includes('email'))
+        const strasseIndex = headers.findIndex(h => h.includes('straße') || h.includes('strasse'))
+        const hausnummerIndex = headers.findIndex(h => h.includes('hausnummer'))
+        const plzIndex = headers.findIndex(h => h.includes('plz'))
+        const stadtIndex = headers.findIndex(h => h.includes('stadt'))
+        const notizenIndex = headers.findIndex(h => h.includes('notizen'))
+
+        const newContacts: Contact[] = []
+        let errorCount = 0
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+
+          if (!values[vorNameIndex]?.trim() || !values[nachNameIndex]?.trim()) {
+            errorCount++
+            continue
+          }
+
+          newContacts.push({
+            id: generateId(),
+            vorname: values[vorNameIndex] || '',
+            nachname: values[nachNameIndex] || '',
+            telefon: values[telefonIndex] || '',
+            email: values[emailIndex] || '',
+            strasse: values[strasseIndex] || '',
+            hausnummer: values[hausnummerIndex] || '',
+            plz: values[plzIndex] || '',
+            stadt: values[stadtIndex] || '',
+            notizen: values[notizenIndex] || '',
+            createdAt: new Date().toISOString(),
+          })
+        }
+
+        if (newContacts.length > 0) {
+          const updated = [...contacts, ...newContacts].sort((a, b) =>
+            (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+          setContacts(updated)
+          saveContacts(updated)
+          showFeedback(`${newContacts.length} Kontakte importiert` + (errorCount > 0 ? ` (${errorCount} übersprungen)` : ''))
+        } else {
+          showFeedback('Keine gültigen Kontakte zum Importieren gefunden')
+        }
+      } catch (error) {
+        console.error('CSV Import Error:', error)
+        showFeedback('Fehler beim Importieren der CSV-Datei')
+      }
+    }
+    reader.readAsText(file)
+    // Reset input so same file can be imported again
+    e.target.value = ''
+  }
+
   const filteredContacts = contacts.filter(c => {
     const q = searchQuery.toLowerCase()
     return c.vorname.toLowerCase().includes(q) || c.nachname.toLowerCase().includes(q) ||
@@ -415,8 +522,8 @@ export default function KontaktePage() {
         <p className="text-slate-500 text-sm mt-1">Verwalten Sie Ihre Mieter und Ansprechpartner</p>
       </div>
 
-      <div className="flex gap-3 mb-6">
-        <div className="flex-1 relative">
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <div className="flex-1 relative min-w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input type="text" placeholder="Nach Name, Telefon oder E-Mail suchen..."
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -427,6 +534,23 @@ export default function KontaktePage() {
           <Plus className="w-4 h-4" />
           Neuen Kontakt anlegen
         </button>
+        <div className="flex gap-2">
+          <button onClick={handleCSVExport}
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            <Download className="w-4 h-4" />
+            CSV exportieren
+          </button>
+          <label className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
+            <Upload className="w-4 h-4" />
+            CSV importieren
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleCSVImport}
+              className="hidden"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">

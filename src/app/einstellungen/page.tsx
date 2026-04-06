@@ -1,4 +1,7 @@
-import { Phone, Mail, Radio, Shield, Zap, Clock } from 'lucide-react'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Phone, Mail, Shield, Zap, Clock, Palette, Upload, X, Check } from 'lucide-react'
 
 function Section({ title, description, children }: {
   title: string
@@ -34,13 +37,163 @@ function StatusChip({ active }: { active: boolean }) {
   )
 }
 
+const BRAND_COLORS = [
+  { name: 'Blau', value: '#2563eb' },
+  { name: 'Grün', value: '#059669' },
+  { name: 'Violett', value: '#7c3aed' },
+  { name: 'Orange', value: '#ea580c' },
+  { name: 'Rosa', value: '#db2777' },
+  { name: 'Cyan', value: '#06b6d4' },
+]
+
 export default function EinstellungenPage() {
+  const [selectedColor, setSelectedColor] = useState('#2563eb')
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [logoUploadKey, setLogoUploadKey] = useState(0)
+
+  useEffect(() => {
+    // Load saved brand color and logo from localStorage
+    const savedColor = localStorage.getItem('immogreta_brand_color')
+    const savedLogo = localStorage.getItem('immogreta_logo')
+
+    if (savedColor) setSelectedColor(savedColor)
+    if (savedLogo) setLogoPreview(savedLogo)
+  }, [])
+
+  useEffect(() => {
+    // Set CSS variable for brand color
+    document.documentElement.style.setProperty('--brand-color', selectedColor)
+  }, [selectedColor])
+
+  function handleColorChange(color: string) {
+    setSelectedColor(color)
+    localStorage.setItem('immogreta_brand_color', color)
+    showFeedback('Markenfarbe gespeichert')
+  }
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setLogoPreview(base64)
+      localStorage.setItem('immogreta_logo', base64)
+      showFeedback('Logo erfolgreich hochgeladen')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleRemoveLogo() {
+    setLogoPreview(null)
+    localStorage.removeItem('immogreta_logo')
+    setLogoUploadKey(prev => prev + 1)
+    showFeedback('Logo entfernt')
+  }
+
+  function showFeedback(msg: string) {
+    setFeedback(msg)
+    setTimeout(() => setFeedback(null), 2500)
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Feedback Toast */}
+      {feedback && (
+        <div className="fixed top-4 right-4 flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg shadow-lg text-sm font-medium z-50">
+          <Check className="w-4 h-4" />
+          {feedback}
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800">Einstellungen</h1>
-        <p className="text-slate-500 text-sm mt-1">Konfiguration von Lisa und dem System</p>
+        <p className="text-slate-500 text-sm mt-1">Konfiguration von ImmoGreta und dem System</p>
       </div>
+
+      {/* Branding & Design Section */}
+      <Section
+        title="Markendesign"
+        description="Passen Sie Farbe und Logo nach Ihren Wünschen an"
+      >
+        <div className="space-y-6">
+          {/* Color Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-800 mb-4">
+              Markenfarbe
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
+              {BRAND_COLORS.map(color => (
+                <button
+                  key={color.value}
+                  onClick={() => handleColorChange(color.value)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                    selectedColor === color.value
+                      ? 'border-slate-900 bg-slate-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border border-slate-300"
+                    style={{ backgroundColor: color.value }}
+                  />
+                  <span className="text-sm font-medium text-slate-700">{color.name}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-3">
+              Diese Farbe wird in der Seitenleiste, Buttons und Highlights verwendet.
+            </p>
+          </div>
+
+          {/* Logo Upload */}
+          <div className="border-t border-slate-100 pt-6">
+            <label className="block text-sm font-semibold text-slate-800 mb-4">
+              Logo-Upload
+            </label>
+            <div className="flex items-start gap-4">
+              {logoPreview ? (
+                <div className="relative">
+                  <img
+                    src={logoPreview}
+                    alt="Logo Preview"
+                    className="w-16 h-16 rounded-lg border border-slate-200 object-cover"
+                  />
+                  <button
+                    onClick={handleRemoveLogo}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50">
+                  <Upload className="w-6 h-6 text-slate-400" />
+                </div>
+              )}
+              <div className="flex-1">
+                <label className="block">
+                  <input
+                    key={logoUploadKey}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <span className="inline-block px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors cursor-pointer">
+                    Logo wählen
+                  </span>
+                </label>
+                <p className="text-xs text-slate-500 mt-2">
+                  Empfohlene Größe: 100x100px oder größer. Formate: PNG, JPG, SVG
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
 
       {/* Lisa Status */}
       <Section

@@ -4,9 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   Phone,
-  PhoneMissed,
-  PhoneCall,
-  Clock,
   Search,
   ChevronDown,
   X,
@@ -15,9 +12,6 @@ import {
   Star,
   Mail,
   Check,
-  Flame,
-  AlertTriangle,
-  UserCheck,
   Users,
   FileText,
   ChevronUp,
@@ -27,31 +21,111 @@ import {
 type Call = {
   id: string
   caller_number: string | null
-  status: 'completed' | 'in_progress' | 'missed'
+  caller_name: string | null
+  status: 'new' | 'in_progress' | 'done'
   started_at: string
-  ended_at: string | null
-  duration_sec: number | null
-  transcript: string | null
+  duration: number
+  task: string
+  task_icon: string
+  task_color: string
   summary: string | null
-  tenant_id: string | null
-  contact_name?: string
-  contact_phone?: string
-  contact_address?: string
+  mood: string
+  transcript: string | null
 }
+
+// Demo data
+const demoCalls: Call[] = [
+  {
+    id: '1',
+    caller_number: '+49 170 1234567',
+    caller_name: 'Klaus Brenner',
+    duration: 180,
+    started_at: new Date().toISOString(),
+    status: 'new',
+    task: 'Heizungsprobleme aufnehmen',
+    task_icon: '🔥',
+    task_color: 'orange',
+    summary: 'Kunde klagt über Heizungsausfall seit 2 Tagen. Termin für Techniker gewünscht.',
+    mood: 'Ruhig',
+    transcript: null,
+  },
+  {
+    id: '2',
+    caller_number: '+49 163 9876543',
+    caller_name: 'Tanja Feldmann',
+    duration: 145,
+    started_at: new Date(Date.now() - 86400000).toISOString(),
+    status: 'new',
+    task: 'Mitarbeiteranfragen',
+    task_icon: '👤',
+    task_color: 'blue',
+    summary: 'Allgemeine Auskunft zur Wärmepumpe gewünscht.',
+    mood: 'Freundlich',
+    transcript: null,
+  },
+  {
+    id: '3',
+    caller_number: '+49 152 5555444',
+    caller_name: 'Mehmet Yilmaz',
+    duration: 90,
+    started_at: new Date(Date.now() - 86400000).toISOString(),
+    status: 'new',
+    task: 'Neukundenanfragen aufnehmen',
+    task_icon: '✨',
+    task_color: 'green',
+    summary: 'Neukunde interessiert an Angebot für Wärmepumpe.',
+    mood: 'Interessiert',
+    transcript: null,
+  },
+  {
+    id: '4',
+    caller_number: '+49 177 3214321',
+    caller_name: 'Anna-Maria Krüger',
+    duration: 210,
+    started_at: new Date(Date.now() - 86400000).toISOString(),
+    status: 'in_progress',
+    task: 'Verkaufs- und Akquiseanrufe',
+    task_icon: '💰',
+    task_color: 'green',
+    summary: 'Angebotsanfrage für Preisnachfrage. Angebotsdokument soll zugesendet werden.',
+    mood: 'Geschäftlich',
+    transcript: null,
+  },
+  {
+    id: '5',
+    caller_number: '+49 151 7778889',
+    caller_name: 'Holger Steinmetz',
+    duration: 167,
+    started_at: new Date(Date.now() - 86400000).toISOString(),
+    status: 'new',
+    task: 'Heizungsprobleme aufnehmen',
+    task_icon: '🔥',
+    task_color: 'orange',
+    summary: 'Störungsmeldung Heizung. Keine Warmwasserversorgung.',
+    mood: 'Besorgt',
+    transcript: null,
+  },
+  {
+    id: '6',
+    caller_number: '+49 160 1112223',
+    caller_name: 'Nadine Hofstetter',
+    duration: 245,
+    started_at: new Date(Date.now() - 86400000).toISOString(),
+    status: 'done',
+    task: 'Notfall',
+    task_icon: '🚨',
+    task_color: 'red',
+    summary: 'Notfall: Heizungsrohrbruch. Sofortiger Techniker angefordert. Reklamation eingereicht.',
+    mood: 'Aufgeregt',
+    transcript: null,
+  },
+]
 
 function formatDuration(sec: number | null) {
   if (!sec) return '—'
   const m = Math.floor(sec / 60)
   const s = sec % 60
-  return m > 0 ? `${m} min` : `${s}s`
-}
-
-function formatDurationLong(sec: number | null) {
-  if (!sec) return '—'
-  const m = Math.floor(sec / 60)
-  const s = sec % 60
-  if (m > 0) return `${m} min ${s}s`
-  return `${s}s`
+  return m > 0 ? `${m}m ${s}s` : `${s}s`
 }
 
 function formatDate(iso: string) {
@@ -70,125 +144,21 @@ function formatDate(iso: string) {
   )
 }
 
-function getCategory(summary: string | null): {
-  label: string
-  emoji: string
-  bg: string
-  text: string
-  borderColor: string
-} {
-  if (!summary)
-    return {
-      label: 'Ohne Aufgabe',
-      emoji: '📋',
-      bg: 'bg-gray-50',
-      text: 'text-gray-700',
-      borderColor: 'border-gray-200',
-    }
-  const s = summary.toLowerCase()
-
-  if (
-    s.includes('notfall') ||
-    s.includes('rohrbruch') ||
-    s.includes('dringend') ||
-    s.includes('wasser') ||
-    s.includes('gas')
-  ) {
-    return {
-      label: 'Notfall',
-      emoji: '🚨',
-      bg: 'bg-red-50',
-      text: 'text-red-700',
-      borderColor: 'border-red-200',
-    }
+function getTaskColor(color: string) {
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
+    red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
+    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+    green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' },
+    blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+    purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
   }
-
-  if (
-    s.includes('heizung') ||
-    s.includes('störung') ||
-    s.includes('wartung') ||
-    s.includes('reparatur') ||
-    s.includes('thermostat') ||
-    s.includes('temperatur')
-  ) {
-    return {
-      label: 'Heizungsprobleme aufnehmen',
-      emoji: '🔥',
-      bg: 'bg-orange-50',
-      text: 'text-orange-700',
-      borderColor: 'border-orange-200',
-    }
-  }
-
-  if (
-    s.includes('neukunde') ||
-    s.includes('interessent') ||
-    s.includes('neukundenanfrage') ||
-    s.includes('erstanfrage')
-  ) {
-    return {
-      label: 'Neukunden',
-      emoji: '🌱',
-      bg: 'bg-green-50',
-      text: 'text-green-700',
-      borderColor: 'border-green-200',
-    }
-  }
-
-  if (
-    s.includes('mitarbeiter') ||
-    s.includes('personal') ||
-    s.includes('kollege') ||
-    s.includes('team')
-  ) {
-    return {
-      label: 'Mitarbeiter',
-      emoji: '👥',
-      bg: 'bg-yellow-50',
-      text: 'text-yellow-700',
-      borderColor: 'border-yellow-200',
-    }
-  }
-
-  return {
-    label: 'Testanruf',
-    emoji: '📞',
-    bg: 'bg-gray-50',
-    text: 'text-gray-700',
-    borderColor: 'border-gray-200',
-  }
+  return colors[color] || colors.blue
 }
 
-function mapStatus(dbStatus: string): 'Neu' | 'In Bearbeitung' | 'Erledigt' {
-  switch (dbStatus) {
-    case 'missed':
-      return 'Neu'
-    case 'in_progress':
-      return 'In Bearbeitung'
-    case 'completed':
-      return 'Erledigt'
-    default:
-      return 'Neu'
-  }
-}
-
-const tabs = [
-  { key: 'all', label: 'Alle' },
-  { key: 'missed', label: 'Neu' },
-  { key: 'in_progress', label: 'In Bearbeitung' },
-  { key: 'completed', label: 'Erledigt' },
-  { key: 'archived', label: 'Archiviert' },
-]
-
-// ── Transcript component ────────────────────────────────────────────────────
 function TranscriptSection({
   transcript,
-  callId,
-  callerNumber,
 }: {
   transcript: string | null
-  callId: string
-  callerNumber: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -213,7 +183,6 @@ function TranscriptSection({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Parse transcript lines: "Agent: ..." / "Caller: ..."
   const lines = transcript.split('\n').filter(l => l.trim())
 
   return (
@@ -243,10 +212,8 @@ function TranscriptSection({
         </div>
       </div>
 
-      {/* Preview or full transcript */}
       <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden">
         {!open ? (
-          // Short preview: first 3 lines
           <div className="p-3 space-y-2">
             {lines.slice(0, 3).map((line, i) => {
               const isAgent = line.toLowerCase().startsWith('agent') || line.toLowerCase().startsWith('greta') || line.toLowerCase().startsWith('ki')
@@ -266,7 +233,6 @@ function TranscriptSection({
             )}
           </div>
         ) : (
-          // Full conversation
           <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
             {lines.map((line, i) => {
               const isAgent = line.toLowerCase().startsWith('agent') || line.toLowerCase().startsWith('greta') || line.toLowerCase().startsWith('ki')
@@ -284,43 +250,44 @@ function TranscriptSection({
           </div>
         )}
       </div>
-
-      {/* Raw text toggle (for unformatted transcripts) */}
-      {lines.length <= 1 && transcript.length > 0 && (
-        <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
-          {transcript}
-        </div>
-      )}
     </div>
   )
 }
-// ────────────────────────────────────────────────────────────────────────────
+
+const tabs = [
+  { key: 'all', label: 'Alle' },
+  { key: 'new', label: 'Neu' },
+  { key: 'in_progress', label: 'In Bearbeitung' },
+  { key: 'done', label: 'Erledigt' },
+  { key: 'archived', label: 'Archiviert' },
+]
 
 export default function AnrufePage() {
-  const [calls, setCalls] = useState<Call[]>([])
-  const [loading, setLoading] = useState(true)
+  const [calls, setCalls] = useState<Call[]>(demoCalls)
+  const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
   const [showShortCalls, setShowShortCalls] = useState(false)
   const [selectedCall, setSelectedCall] = useState<Call | null>(null)
-  const [statusMap, setStatusMap] = useState<Record<string, 'Neu' | 'In Bearbeitung' | 'Erledigt'>>({})
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from('calls')
-        .select('*')
-        .order('started_at', { ascending: false })
-        .limit(100)
-      const calls = (data ?? []) as Call[]
-      setCalls(calls)
+      setLoading(true)
+      try {
+        const { data } = await supabase
+          .from('calls')
+          .select('*')
+          .order('started_at', { ascending: false })
+          .limit(100)
 
-      const initialStatus: Record<string, 'Neu' | 'In Bearbeitung' | 'Erledigt'> = {}
-      calls.forEach(c => {
-        initialStatus[c.id] = mapStatus(c.status)
-      })
-      setStatusMap(initialStatus)
-      setLoading(false)
+        if (data && data.length > 0) {
+          setCalls(data as any[])
+        }
+      } catch (error) {
+        console.error('Error loading calls:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])
@@ -328,31 +295,22 @@ export default function AnrufePage() {
   const filtered = calls.filter(c => {
     let matchTab = true
     if (activeTab !== 'all') {
-      if (activeTab === 'missed') matchTab = c.status === 'missed'
+      if (activeTab === 'new') matchTab = c.status === 'new'
       else if (activeTab === 'in_progress') matchTab = c.status === 'in_progress'
-      else if (activeTab === 'completed') matchTab = c.status === 'completed'
+      else if (activeTab === 'done') matchTab = c.status === 'done'
       else if (activeTab === 'archived') matchTab = false
     }
 
     const matchSearch =
       !search ||
       (c.caller_number ?? '').includes(search) ||
+      (c.caller_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
       (c.summary ?? '').toLowerCase().includes(search.toLowerCase())
 
-    const matchDuration = !showShortCalls || (c.duration_sec ?? 0) >= 30
+    const matchDuration = !showShortCalls || (c.duration ?? 0) >= 30
 
     return matchTab && matchSearch && matchDuration
   })
-
-  const handleStatusToggle = (callId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const current = statusMap[callId] || 'Neu'
-    let next: 'Neu' | 'In Bearbeitung' | 'Erledigt'
-    if (current === 'Neu') next = 'In Bearbeitung'
-    else if (current === 'In Bearbeitung') next = 'Erledigt'
-    else next = 'Neu'
-    setStatusMap(prev => ({ ...prev, [callId]: next }))
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -388,7 +346,7 @@ export default function AnrufePage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Suche..."
+            placeholder="Suche nach Name, Nummer..."
             className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-opacity-5 focus:border-slate-900"
           />
         </div>
@@ -431,9 +389,10 @@ export default function AnrufePage() {
         ) : (
           <div className="space-y-1 border border-slate-200 rounded-lg overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr] px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <div className="grid grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
               <div>Kontakt</div>
               <div>Aufgabe</div>
+              <div>Dauer</div>
               <div>Datum</div>
               <div>Status</div>
             </div>
@@ -441,22 +400,21 @@ export default function AnrufePage() {
             {/* Table rows */}
             <div>
               {filtered.map(call => {
-                const cat = getCategory(call.summary)
-                const displayStatus = statusMap[call.id] || mapStatus(call.status)
+                const colors = getTaskColor(call.task_color)
                 return (
                   <button
                     key={call.id}
                     onClick={() => setSelectedCall(call)}
-                    className="w-full grid grid-cols-[1.5fr_2fr_1.5fr_1fr] items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
+                    className="w-full grid grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
                   >
                     {/* Kontakt */}
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-slate-600">
-                        {call.caller_number?.[0] || 'U'}
+                        {call.caller_name?.[0] || call.caller_number?.[0] || 'U'}
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-900 truncate">
-                          {call.contact_name || call.caller_number || 'Unbekannt'}
+                          {call.caller_name || call.caller_number || 'Unbekannt'}
                         </p>
                         <p className="text-xs text-slate-400 truncate">
                           {call.caller_number}
@@ -467,32 +425,34 @@ export default function AnrufePage() {
                     {/* Aufgabe */}
                     <div className="flex items-start">
                       <div
-                        className={`px-3 py-1.5 rounded-lg border ${cat.bg} ${cat.text} ${cat.borderColor} text-sm font-medium flex items-center gap-1.5`}
+                        className={`px-3 py-1.5 rounded-lg border ${colors.bg} ${colors.text} ${colors.border} text-sm font-medium flex items-center gap-1.5`}
                       >
-                        <span>{cat.emoji}</span>
-                        <span>{cat.label}</span>
+                        <span>{call.task_icon}</span>
+                        <span>{call.task}</span>
                       </div>
                     </div>
 
+                    {/* Dauer */}
+                    <div className="text-sm text-slate-600 font-medium">
+                      {formatDuration(call.duration)}
+                    </div>
+
                     {/* Datum */}
-                    <div className="flex items-start">
-                      <div className="text-sm text-slate-600">
-                        <div className="font-medium">{formatDuration(call.duration_sec)}</div>
-                        <div className="text-xs text-slate-400">
-                          {formatDate(call.started_at)}
-                        </div>
-                      </div>
+                    <div className="text-sm text-slate-600">
+                      <div className="font-medium">{formatDate(call.started_at)}</div>
                     </div>
 
                     {/* Status */}
                     <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={displayStatus !== 'Neu'}
-                        onChange={e => handleStatusToggle(call.id, e as any)}
-                        className="w-4 h-4 rounded border-slate-300 cursor-pointer"
-                      />
-                      <span className="text-sm text-slate-600">{displayStatus}</span>
+                      <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        call.status === 'new'
+                          ? 'bg-blue-100 text-blue-700'
+                          : call.status === 'in_progress'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {call.status === 'new' ? 'Neu' : call.status === 'in_progress' ? 'In Bearbeitung' : 'Erledigt'}
+                      </div>
                     </div>
                   </button>
                 )
@@ -517,35 +477,32 @@ export default function AnrufePage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Time and title */}
+            {/* Title and date */}
             <div>
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                 {formatDate(selectedCall.started_at)}
               </p>
               <h3 className="text-xl font-semibold text-slate-900">
-                {getCategory(selectedCall.summary).label}
+                {selectedCall.task}
               </h3>
             </div>
 
             {/* Duration and mood pills */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-700">
-                {formatDurationLong(selectedCall.duration_sec)}
+                {formatDuration(selectedCall.duration)}
               </div>
-              <div className="px-3 py-1.5 bg-green-100 rounded-full text-sm font-medium text-green-700">
-                Ruhig
+              <div className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-700">
+                {selectedCall.mood}
               </div>
             </div>
 
             {/* Summary */}
             {selectedCall.summary && (
               <div>
-                <p className="text-sm text-slate-700 leading-relaxed mb-2">
+                <p className="text-sm text-slate-700 leading-relaxed">
                   {selectedCall.summary}
                 </p>
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Mehr anzeigen
-                </button>
               </div>
             )}
 
@@ -553,18 +510,15 @@ export default function AnrufePage() {
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center text-sm font-semibold text-slate-600">
-                  {(selectedCall.contact_name || selectedCall.caller_number || 'U')[0]}
+                  {(selectedCall.caller_name || selectedCall.caller_number || 'U')[0]}
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedCall.contact_name || 'Kontakt'}
+                    {selectedCall.caller_name || 'Anrufer'}
                   </p>
                   <p className="text-xs text-slate-500">{selectedCall.caller_number}</p>
                 </div>
               </div>
-              {selectedCall.contact_address && (
-                <p className="text-xs text-slate-600">{selectedCall.contact_address}</p>
-              )}
             </div>
 
             {/* Ausgeführte Aufgabe section */}
@@ -576,29 +530,15 @@ export default function AnrufePage() {
                 <div className="flex items-center gap-2">
                   <div
                     className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-1.5 ${
-                      getCategory(selectedCall.summary).bg
-                    } ${getCategory(selectedCall.summary).text} ${
-                      getCategory(selectedCall.summary).borderColor
+                      getTaskColor(selectedCall.task_color).bg
+                    } ${getTaskColor(selectedCall.task_color).text} ${
+                      getTaskColor(selectedCall.task_color).border
                     }`}
                   >
-                    <span>{getCategory(selectedCall.summary).emoji}</span>
-                    <span>{getCategory(selectedCall.summary).label}</span>
+                    <span>{selectedCall.task_icon}</span>
+                    <span>{selectedCall.task}</span>
                   </div>
                 </div>
-
-                {/* Task details as tags */}
-                {selectedCall.summary && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCall.summary.split(',').map((tag, idx) => (
-                      <div
-                        key={idx}
-                        className="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded-full"
-                      >
-                        {tag.trim()}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -610,15 +550,15 @@ export default function AnrufePage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Mail className="w-4 h-4 text-slate-400" />
-                  <span>E-Mail versendet</span>
+                  <span>Benachrichtigung versendet</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Check className="w-4 h-4 text-slate-400" />
-                  <span>Vorlage angewendet</span>
+                  <span>Erfolgreich bearbeitet</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Users className="w-4 h-4 text-slate-400" />
-                  <span>Weitergeleitet</span>
+                  <span>Weitergeleitet an Mitarbeiter</span>
                 </div>
               </div>
             </div>
@@ -645,7 +585,7 @@ export default function AnrufePage() {
             </div>
 
             {/* Transcript section */}
-            <TranscriptSection transcript={selectedCall.transcript} callId={selectedCall.id} callerNumber={selectedCall.caller_number} />
+            <TranscriptSection transcript={selectedCall.transcript} />
           </div>
         </div>
       )}

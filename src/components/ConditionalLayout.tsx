@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
+import FloatingGreta from './FloatingGreta'
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -18,6 +19,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
       <main className="ml-56 flex-1 min-h-full p-8 bg-slate-50">
         {children}
       </main>
+      <FloatingGreta />
     </div>
   )
 }

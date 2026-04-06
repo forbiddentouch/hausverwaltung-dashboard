@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Building2, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
+import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -10,8 +10,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [success, setSuccess] = useState<string | null>(null)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -24,7 +26,7 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         window.location.href = '/'
-      } else {
+      } else if (mode === 'register') {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
         setSuccess('Bestätigungs-E-Mail wurde gesendet. Bitte prüfen Sie Ihr Postfach.')
@@ -45,127 +47,225 @@ export default function LoginPage() {
     }
   }
 
+  async function handlePasswordReset(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    setResetLoading(true)
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: 'https://hausverwaltung-dashboard.vercel.app/reset-password',
+      })
+      if (error) throw error
+      setSuccess('Passwort-Zurücksetzen E-Mail wurde versendet. Bitte prüfen Sie Ihr Postfach.')
+      setResetEmail('')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten'
+      setError(msg)
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 mb-4 shadow-lg">
-            <Building2 className="w-7 h-7 text-white" />
+        {mode !== 'forgot' && (
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 mb-4 shadow-lg">
+              <Building2 className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">ImmoGreta</h1>
+            <p className="text-slate-500 text-sm mt-1">KI-Assistentin für Hausverwaltungen</p>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">ImmoGreta</h1>
-          <p className="text-slate-500 text-sm mt-1">KI-Assistentin für Hausverwaltungen</p>
-        </div>
+        )}
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-          {/* Tabs */}
-          <div className="flex border-b border-slate-100">
-            <button
-              onClick={() => { setMode('login'); setError(null); setSuccess(null) }}
-              className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${
-                mode === 'login'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Anmelden
-            </button>
-            <button
-              onClick={() => { setMode('register'); setError(null); setSuccess(null) }}
-              className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${
-                mode === 'register'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Registrieren
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Error */}
-            {error && (
-              <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                {error}
+          {mode === 'forgot' ? (
+            <>
+              {/* Forgot Password Header */}
+              <div className="px-6 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <button
+                    onClick={() => { setMode('login'); setError(null); setSuccess(null); setResetEmail('') }}
+                    className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  </button>
+                  <h2 className="text-lg font-semibold text-slate-900">Passwort zurücksetzen</h2>
+                </div>
               </div>
-            )}
-            {success && (
-              <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
-                {success}
-              </div>
-            )}
 
-            {/* Email */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">E-Mail-Adresse</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="name@unternehmen.de"
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
+              <form onSubmit={handlePasswordReset} className="p-6 space-y-4">
+                {error && (
+                  <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
+                    {success}
+                  </div>
+                )}
 
-            {/* Password */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Passwort</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder={mode === 'register' ? 'Mindestens 6 Zeichen' : '••••••••'}
-                  required
-                  minLength={6}
-                  className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">E-Mail-Adresse</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)}
+                      placeholder="name@unternehmen.de"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  type="submit"
+                  disabled={resetLoading}
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {resetLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Wird versendet...
+                    </>
+                  ) : (
+                    'Zurücksetzen-Link versendet'
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              {/* Login/Register Tabs */}
+              <div className="flex border-b border-slate-100">
+                <button
+                  onClick={() => { setMode('login'); setError(null); setSuccess(null) }}
+                  className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${
+                    mode === 'login'
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Anmelden
+                </button>
+                <button
+                  onClick={() => { setMode('register'); setError(null); setSuccess(null) }}
+                  className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${
+                    mode === 'register'
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Registrieren
                 </button>
               </div>
-            </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {mode === 'login' ? 'Anmelden...' : 'Registrieren...'}
-                </>
-              ) : (
-                mode === 'login' ? 'Anmelden' : 'Konto erstellen'
-              )}
-            </button>
-          </form>
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                {/* Error */}
+                {error && (
+                  <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
+                    {success}
+                  </div>
+                )}
 
-          <div className="px-6 pb-6 text-center">
-            <p className="text-xs text-slate-400">
-              {mode === 'login'
-                ? 'Noch kein Konto? '
-                : 'Bereits registriert? '}
-              <button
-                onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); setSuccess(null) }}
-                className="text-blue-600 font-semibold hover:underline"
-              >
-                {mode === 'login' ? 'Jetzt registrieren' : 'Anmelden'}
-              </button>
-            </p>
-          </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">E-Mail-Adresse</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="name@unternehmen.de"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Passwort</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder={mode === 'register' ? 'Mindestens 6 Zeichen' : '••••••••'}
+                      required
+                      minLength={6}
+                      className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Forgot Password Link (only in login mode) */}
+                {mode === 'login' && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot'); setError(null); setSuccess(null); setEmail(''); setPassword('') }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Passwort vergessen?
+                    </button>
+                  </div>
+                )}
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {mode === 'login' ? 'Anmelden...' : 'Registrieren...'}
+                    </>
+                  ) : (
+                    mode === 'login' ? 'Anmelden' : 'Konto erstellen'
+                  )}
+                </button>
+              </form>
+
+              <div className="px-6 pb-6 text-center">
+                <p className="text-xs text-slate-400">
+                  {mode === 'login'
+                    ? 'Noch kein Konto? '
+                    : 'Bereits registriert? '}
+                  <button
+                    onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); setSuccess(null) }}
+                    className="text-blue-600 font-semibold hover:underline"
+                  >
+                    {mode === 'login' ? 'Jetzt registrieren' : 'Anmelden'}
+                  </button>
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
