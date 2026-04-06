@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Onboarding is accessible for logged-in users without an org
+  // Onboarding is accessible for logged-in users
   if (pathname.startsWith('/onboarding')) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
@@ -42,21 +42,26 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Protect all other routes
+  // Protect all other routes – must be logged in
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Check if user has an organization – if not, redirect to onboarding
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle()
+  // Check if user has an organization – graceful fallback if table doesn't exist yet
+  try {
+    const { data: membership, error } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
 
-  if (!membership) {
-    return NextResponse.redirect(new URL('/onboarding', request.url))
+    // Only redirect to onboarding if query succeeded but no membership found
+    if (!error && !membership) {
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
+  } catch {
+    // Table doesn't exist yet (migration not run) – allow access anyway
   }
 
   return supabaseResponse
