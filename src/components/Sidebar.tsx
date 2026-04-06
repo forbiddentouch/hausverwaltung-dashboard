@@ -64,7 +64,7 @@ export default function Sidebar() {
             <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/greta-avatar.svg"
+                src="/greta-avatar.png"
                 alt="ImmoGreta"
                 width={36}
                 height={36}
