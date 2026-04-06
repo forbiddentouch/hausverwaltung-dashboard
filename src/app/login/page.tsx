@@ -2,11 +2,9 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import { Building2, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -25,8 +23,7 @@ export default function LoginPage() {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.push('/')
-        router.refresh()
+        window.location.href = '/'
       } else {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
@@ -142,7 +139,7 @@ export default function LoginPage() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={loading}
               className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
