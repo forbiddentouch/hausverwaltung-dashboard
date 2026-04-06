@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Link2, Phone, Database, Mail, Globe, Check,
+  Link2, Phone, Mail, Globe, Check,
   Building2, ArrowRight, Loader2, Mic,
 } from 'lucide-react'
 
@@ -45,17 +45,6 @@ const INTEGRATIONS: Integration[] = [
     border: 'border-violet-200',
     connected: false,
     category: 'telefon',
-  },
-  {
-    id: 'datenbank',
-    name: 'Datenbank',
-    description: 'Ihre sichere Datenbank für Anrufe, Tickets und Kontakte',
-    icon: Database,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
-    connected: true,
-    category: 'hausverwaltung',
   },
   {
     id: 'haufe',

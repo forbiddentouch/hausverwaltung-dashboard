@@ -1,17 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Phone, Mail, Shield, Zap, Clock, Palette, Upload, X, Check, Database } from 'lucide-react'
-
-interface Integration {
-  id: string
-  name: string
-  description: string
-  icon: React.ReactNode
-  connected: boolean
-  permanent?: boolean
-  details?: { label: string; value: string }[]
-}
+import { Phone, Mail, Shield, Clock, Palette, Upload, X, Check } from 'lucide-react'
 
 function Section({ title, description, children }: {
   title: string
@@ -230,84 +220,6 @@ export default function EinstellungenPage() {
         <InfoRow label="Telefonnummer" value="+1 (662) 439-4944" mono />
         <InfoRow label="Verfügbarkeit" value="24/7 – Immer erreichbar" />
         <InfoRow label="Sprache" value="Deutsch" />
-      </Section>
-
-      {/* Webhook */}
-      <Section
-        title="Webhook & Integration"
-        description="Verbindung zwischen Retell AI und diesem System"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <Zap className="w-4 h-4 text-green-500" />
-          <span className="text-sm font-medium text-green-700">Webhook aktiv</span>
-        </div>
-        <InfoRow
-          label="Webhook URL"
-          value="hausverwaltung-platform.onrender.com/webhook/retell"
-          mono
-        />
-        <InfoRow label="Hosting" value="Render.com" />
-        <InfoRow label="Trigger" value="call_ended, call_analyzed" />
-      </Section>
-
-      {/* Integrationen */}
-      <Section
-        title="Integrationen"
-        description="Verbundene Dienste und Datenquellen"
-      >
-        {[
-          {
-            id: 'datenbank',
-            name: 'Datenbank',
-            description: 'Sichere, zentral verwaltete Datenbank – fest integriert und immer aktiv',
-            icon: <Database className="w-5 h-5 text-blue-500" />,
-            connected: true,
-            permanent: true,
-            details: [
-              { label: 'Anbieter', value: 'Supabase' },
-              { label: 'Region', value: 'eu-west-1 (Frankfurt)' },
-              { label: 'Tabellen', value: 'calls, tickets, tenants' },
-            ],
-          },
-        ].map((integration) => (
-          <div key={integration.id} className="mb-6 last:mb-0 p-4 bg-slate-50 rounded-xl">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                {integration.icon}
-                <div>
-                  <h3 className="font-semibold text-slate-800 text-sm">{integration.name}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{integration.description}</p>
-                </div>
-              </div>
-              <div>
-                {integration.permanent ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Fest integriert
-                  </span>
-                ) : integration.connected ? (
-                  <button className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    Trennen
-                  </button>
-                ) : (
-                  <button className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    Verbinden
-                  </button>
-                )}
-              </div>
-            </div>
-            {integration.details && (
-              <div className="space-y-2 mt-3 pt-3 border-t border-slate-200">
-                {integration.details.map((detail) => (
-                  <div key={detail.label} className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">{detail.label}</span>
-                    <span className="text-xs font-medium text-slate-700">{detail.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
       </Section>
 
       {/* E-Mail */}
