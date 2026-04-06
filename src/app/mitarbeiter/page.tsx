@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mail, Phone, X, Plus, Edit2, Trash2, Check } from 'lucide-react';
 
 interface Staff {
@@ -88,6 +88,7 @@ function getTopicColor(topic: string): string {
 
 export default function MitarbeiterPage() {
   const [staff, setStaff] = useState<Staff[]>([]);
+  const hasLoaded = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -115,13 +116,13 @@ export default function MitarbeiterPage() {
     } else {
       setStaff(SEED_DATA);
     }
+    hasLoaded.current = true;
   }, []);
 
-  // Save to localStorage on change
+  // Save to localStorage – only after initial load to avoid wiping data on mount
   useEffect(() => {
-    if (staff.length > 0) {
-      localStorage.setItem('immogreta_mitarbeiter', JSON.stringify(staff));
-    }
+    if (!hasLoaded.current) return;
+    localStorage.setItem('immogreta_mitarbeiter', JSON.stringify(staff));
   }, [staff]);
 
   const showToast = (message: string) => {

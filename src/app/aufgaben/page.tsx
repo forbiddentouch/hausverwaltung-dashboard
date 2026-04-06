@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pencil, Trash2, Plus, CheckCircle2, Circle } from 'lucide-react';
 
 interface Task {
@@ -128,6 +128,7 @@ const colorSquares: Record<string, string> = {
 
 export default function AufgabenPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const hasLoaded = useRef(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -152,10 +153,12 @@ export default function AufgabenPage() {
     } else {
       setTasks(seedTasks);
     }
+    hasLoaded.current = true;
   }, []);
 
-  // Save to localStorage on every change
+  // Save to localStorage – only after initial load to avoid wiping data on mount
   useEffect(() => {
+    if (!hasLoaded.current) return;
     localStorage.setItem('immogreta_aufgaben', JSON.stringify(tasks));
   }, [tasks]);
 

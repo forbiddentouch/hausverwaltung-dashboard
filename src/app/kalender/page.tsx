@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Phone, Plus, Pencil, Trash2, Check } from 'lucide-react'
 
 interface Appointment {
@@ -53,6 +53,7 @@ const SEED_APPOINTMENTS: Appointment[] = [
 
 export default function KalenderPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const hasLoaded = useRef(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -77,12 +78,13 @@ export default function KalenderPage() {
     } else {
       setAppointments(SEED_APPOINTMENTS)
     }
+    hasLoaded.current = true
   }, [])
 
+  // Save only after initial load to avoid wiping data on mount
   useEffect(() => {
-    if (appointments.length > 0) {
-      localStorage.setItem('immogreta_kalender', JSON.stringify(appointments))
-    }
+    if (!hasLoaded.current) return
+    localStorage.setItem('immogreta_kalender', JSON.stringify(appointments))
   }, [appointments])
 
   const showToast = (message: string) => {
