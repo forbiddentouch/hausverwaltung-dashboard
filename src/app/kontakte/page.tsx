@@ -257,7 +257,7 @@ function DetailPanel({ contact, onClose, onEdit, onDelete }: DetailPanelProps) {
   ].filter(Boolean).join(', ')
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-40 flex flex-col">
+    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-40 flex flex-col">
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <h3 className="font-semibold text-slate-800">Kontaktdetails</h3>
         <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -591,7 +591,7 @@ export default function KontaktePage() {
   })
 
   return (
-    <div className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'mr-96' : ''}`}>
+    <div className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'lg:mr-96' : ''}`}>
       {savedFeedback && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg shadow-lg text-sm font-medium">
           <Check className="w-4 h-4" />
@@ -605,7 +605,7 @@ export default function KontaktePage() {
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
-        <div className="flex-1 relative min-w-64">
+        <div className="flex-1 relative min-w-0 w-full sm:min-w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input type="text" placeholder="Nach Name, Telefon oder E-Mail suchen..."
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -648,7 +648,8 @@ export default function KontaktePage() {
           </div>
         ) : (
           <>
-            <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 grid grid-cols-12 gap-4">
+            {/* Desktop table header */}
+            <div className="hidden lg:grid px-6 py-3 bg-slate-50 border-b border-slate-100 grid-cols-12 gap-4">
               <p className="col-span-4 text-xs font-semibold text-slate-400 uppercase tracking-wide">Name</p>
               <p className="col-span-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Telefon</p>
               <p className="col-span-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">E-Mail</p>
@@ -659,28 +660,29 @@ export default function KontaktePage() {
               {filteredContacts.map(contact => (
                 <div key={contact.id}
                   onClick={() => setSelectedContact(selectedContact?.id === contact.id ? null : contact)}
-                  className={`px-6 py-4 grid grid-cols-12 gap-4 items-center cursor-pointer transition-colors ${
+                  className={`px-4 py-3 lg:px-6 lg:py-4 flex items-center gap-3 lg:grid lg:grid-cols-12 lg:gap-4 cursor-pointer transition-colors ${
                     selectedContact?.id === contact.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50'
                   }`}>
-                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                  <div className="lg:col-span-4 flex items-center gap-3 min-w-0 flex-1">
                     <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(contact.id)} flex items-center justify-center flex-shrink-0`}>
                       <span className="text-white text-xs font-bold">{getInitials(contact.vorname, contact.nachname)}</span>
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{contact.nachname}, {contact.vorname}</p>
-                      {contact.notizen && <p className="text-xs text-slate-400 truncate">{contact.notizen}</p>}
+                      <p className="text-xs text-slate-400 truncate lg:hidden">{contact.telefon || contact.email || ''}</p>
+                      {contact.notizen && <p className="text-xs text-slate-400 truncate hidden lg:block">{contact.notizen}</p>}
                     </div>
                   </div>
-                  <div className="col-span-2 min-w-0">
+                  <div className="hidden lg:block lg:col-span-2 min-w-0">
                     {contact.telefon ? <p className="text-sm text-slate-700 font-mono truncate">{contact.telefon}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-                  <div className="col-span-3 min-w-0">
+                  <div className="hidden lg:block lg:col-span-3 min-w-0">
                     {contact.email ? <p className="text-sm text-slate-600 truncate">{contact.email}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-                  <div className="col-span-2 min-w-0">
+                  <div className="hidden lg:block lg:col-span-2 min-w-0">
                     {contact.stadt ? <p className="text-sm text-slate-600 truncate">{contact.stadt}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-                  <div className="col-span-1 flex justify-end" onClick={e => e.stopPropagation()}>
+                  <div className="lg:col-span-1 flex justify-end flex-shrink-0" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => { setSelectedContact(contact); setEditingContact(contact); setModalMode('edit'); setModalOpen(true) }}
                       className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-600" title="Bearbeiten">

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { signOut } from '@/lib/auth'
 import {
   ChevronRight, Phone, Users, UserCheck, Calendar,
-  Settings, ListTodo, Palette, Copy, LogOut,
+  Settings, ListTodo, Palette, Copy, LogOut, Menu, X,
 } from 'lucide-react'
 
 const menuItems = [
@@ -25,18 +25,23 @@ const optionItems = [
 export default function Sidebar() {
   const pathname = usePathname()
   const [brand, setBrand] = useState('#2563eb')
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     const load = () => setBrand(localStorage.getItem('immogreta_brand_color') || '#2563eb')
     load()
     window.addEventListener('storage', load)
-    // Also listen for custom event dispatched by Einstellungen page
     window.addEventListener('immogreta_brand_updated', load)
     return () => {
       window.removeEventListener('storage', load)
       window.removeEventListener('immogreta_brand_updated', load)
     }
   }, [])
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
 
   const isActive = (href: string) =>
     pathname === href || (href !== '/' && pathname.startsWith(href))
@@ -71,8 +76,8 @@ export default function Sidebar() {
     )
   }
 
-  return (
-    <aside className="fixed left-0 top-0 h-full w-56 bg-white border-r border-slate-200 flex flex-col z-10">
+  const sidebarContent = (
+    <>
       {/* Branding */}
       <div className="px-4 py-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
@@ -86,7 +91,14 @@ export default function Sidebar() {
               <p className="text-xs text-slate-500 leading-tight">Hausverwaltung</p>
             </div>
           </div>
-          <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+          {/* Close button on mobile, chevron on desktop */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors lg:hidden"
+          >
+            <X className="w-4 h-4 text-slate-400" />
+          </button>
+          <button className="p-1 hover:bg-gray-100 rounded transition-colors hidden lg:block">
             <ChevronRight className="w-4 h-4 text-slate-400" />
           </button>
         </div>
@@ -147,6 +159,37 @@ export default function Sidebar() {
           Abmelden
         </button>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-4 left-4 z-30 p-2 bg-white rounded-lg shadow-md border border-slate-200 lg:hidden"
+        aria-label="Menü öffnen"
+      >
+        <Menu className="w-5 h-5 text-slate-700" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - mobile: slide-in overlay, desktop: fixed */}
+      <aside
+        className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 flex flex-col z-50
+          transition-transform duration-300 ease-in-out
+          lg:w-56 lg:translate-x-0 lg:z-10
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   )
 }

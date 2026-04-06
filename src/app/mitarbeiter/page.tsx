@@ -281,8 +281,8 @@ export default function MitarbeiterPage() {
       </div>
 
       {/* Search and Add Button */}
-      <div className="flex gap-4 items-center">
-        <div className="flex-1">
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="flex-1 min-w-0">
           <input
             type="text"
             placeholder="Nach Name oder Email suchen..."
@@ -293,128 +293,82 @@ export default function MitarbeiterPage() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
         >
           <Plus size={20} />
-          Mitarbeiter erstellen
+          <span className="hidden sm:inline">Mitarbeiter erstellen</span>
+          <span className="sm:hidden">Neu</span>
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Kontakt</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Themen</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Aktionen</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredStaff.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                  Keine Mitarbeiter gefunden
-                </td>
-              </tr>
-            ) : (
-              filteredStaff.map((person) => (
-                <tr key={person.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`${getAvatarColor(person.id)} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm`}
-                      >
-                        {getInitials(person.vorname, person.nachname)}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {person.vorname} {person.nachname}
-                        </div>
-                        <div className="text-sm text-gray-600 flex items-center gap-1">
-                          <Mail size={14} />
-                          {person.email}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1 text-gray-700">
-                      <Phone size={16} />
-                      <span className="text-sm">{person.telefon}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {person.themen.length === 0 ? (
-                        <span className="text-sm text-gray-500">Keine Themen</span>
-                      ) : (
-                        person.themen.map((topic) => (
-                          <span
-                            key={topic}
-                            className={`inline-block px-2 py-1 text-xs font-medium rounded ${getTopicColor(topic)}`}
-                          >
-                            {topic}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
+      {/* Staff list */}
+      <div className="space-y-3 lg:space-y-0">
+        {filteredStaff.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 px-6 py-12 text-center text-gray-500">
+            Keine Mitarbeiter gefunden
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+            {filteredStaff.map((person) => (
+              <div key={person.id} className="p-4 lg:px-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`${getAvatarColor(person.id)} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}
+                  >
+                    {getInitials(person.vorname, person.nachname)}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          person.erreichbar ? 'bg-green-500' : 'bg-gray-400'
-                        }`}
-                      />
-                      <span className="text-sm text-gray-700">
-                        {person.erreichbar ? 'Erreichbar' : 'Nicht erreichbar'}
+                      <span className="font-medium text-gray-900 truncate">
+                        {person.vorname} {person.nachname}
                       </span>
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${person.erreichbar ? 'bg-green-500' : 'bg-gray-400'}`} />
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-500 truncate">{person.email}</div>
+                    <div className="text-sm text-gray-500 flex items-center gap-1 lg:hidden">
+                      <Phone size={12} />
+                      {person.telefon}
+                    </div>
+                  </div>
+                  <div className="hidden lg:flex items-center gap-1 text-gray-700 flex-shrink-0">
+                    <Phone size={16} />
+                    <span className="text-sm">{person.telefon}</span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {deleteConfirm === person.id ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700">Löschen?</span>
-                        <button
-                          onClick={() => handleDelete(person.id)}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                        >
+                        <button onClick={() => handleDelete(person.id)} className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
                           <Check size={14} />
-                          Ja
                         </button>
-                        <button
-                          onClick={() => setDeleteConfirm(null)}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
-                        >
+                        <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400">
                           <X size={14} />
-                          Nein
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 justify-end">
-                        <button
-                          onClick={() => openEditModal(person)}
-                          className="inline-flex items-center gap-1 px-3 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        >
+                      <>
+                        <button onClick={() => openEditModal(person)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors">
                           <Edit2 size={16} />
                         </button>
-                        <button
-                          onClick={() => setDeleteConfirm(person.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        >
+                        <button onClick={() => setDeleteConfirm(person.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors">
                           <Trash2 size={16} />
                         </button>
-                      </div>
+                      </>
                     )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                </div>
+                {person.themen.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2 ml-13 lg:ml-13">
+                    {person.themen.map((topic) => (
+                      <span key={topic} className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${getTopicColor(topic)}`}>
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal */}

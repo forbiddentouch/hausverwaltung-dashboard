@@ -96,24 +96,24 @@ export default async function DashboardPage() {
       </div>
 
       {/* ImmoGreta status banner - blue gradient card */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-8 py-6 mb-8 flex items-center justify-between shadow-lg">
-        <div className="flex-1">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-5 py-5 lg:px-8 lg:py-6 mb-8 flex items-center justify-between shadow-lg">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <PulsingDot />
             <span className="text-blue-100 text-sm font-semibold">ImmoGreta ist aktiv</span>
           </div>
-          <h2 className="text-white font-bold text-xl mb-1">Ihre KI-Assistentin nimmt Anrufe entgegen</h2>
-          <p className="text-blue-100 text-sm">+1 (662) 439-4944 · Automatische Ticket-Erstellung</p>
+          <h2 className="text-white font-bold text-lg lg:text-xl mb-1">Ihre KI-Assistentin nimmt Anrufe entgegen</h2>
+          <p className="text-blue-100 text-xs lg:text-sm">+1 (662) 439-4944 · Automatische Ticket-Erstellung</p>
         </div>
-        <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+        <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 ml-4">
           <div className="animate-bounce">
-            <PhoneCall className="w-8 h-8 text-white" />
+            <PhoneCall className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
           </div>
         </div>
       </div>
 
-      {/* KPI Grid - 4 columns */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
           <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
             <Phone className="w-5 h-5 text-blue-600" />
@@ -152,7 +152,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Two column layout */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Recent calls */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -222,8 +222,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom quick stats - 3 columns */}
-      <div className="grid grid-cols-3 gap-6">
+      {/* Bottom quick stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
           <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
             <Users className="w-5 h-5 text-blue-600" />

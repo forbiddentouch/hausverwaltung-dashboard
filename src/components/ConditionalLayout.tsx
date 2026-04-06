@@ -21,13 +21,11 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
 
       if (session) {
         setAuthState('authenticated')
-        // Logged-in user on login page → redirect to dashboard
         if (isPublicPage) {
           router.replace('/')
         }
       } else {
         setAuthState('unauthenticated')
-        // Not logged in and not on a public page → redirect to login
         if (!isPublicPage) {
           router.replace('/login')
         }
@@ -36,7 +34,6 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
 
     checkAuth()
 
-    // Listen for auth state changes (login, logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setAuthState('authenticated')
@@ -51,12 +48,10 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
     return () => subscription.unsubscribe()
   }, [pathname, isPublicPage, router])
 
-  // Public pages: render immediately
   if (isPublicPage) {
     return <>{children}</>
   }
 
-  // Loading state while checking auth
   if (authState === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -68,22 +63,19 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
     )
   }
 
-  // Not authenticated → will redirect, show nothing
   if (authState === 'unauthenticated') {
     return null
   }
 
-  // Onboarding page: no sidebar
   if (isOnboardingPage) {
     return <>{children}</>
   }
 
-  // Authenticated: full layout
   return (
     <div className="flex h-full">
       <BrandStyle />
       <Sidebar />
-      <main className="ml-56 flex-1 min-h-full p-8 bg-slate-50">
+      <main className="flex-1 min-h-full p-4 pt-16 bg-slate-50 lg:ml-56 lg:p-8 lg:pt-8">
         {children}
       </main>
       <FloatingGreta />
