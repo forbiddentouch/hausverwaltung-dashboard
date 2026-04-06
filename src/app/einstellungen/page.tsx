@@ -220,39 +220,19 @@ export default function EinstellungenPage() {
         <InfoRow label="Telefonnummer" value="+1 (662) 439-4944" mono />
         <InfoRow label="Verfügbarkeit" value="24/7 – Immer erreichbar" />
         <InfoRow label="Sprache" value="Deutsch" />
-        <InfoRow label="Anbieter" value="Retell AI" />
       </Section>
 
-      {/* Webhook */}
-      <Section
-        title="Webhook & Integration"
-        description="Verbindung zwischen Retell AI und diesem System"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <Zap className="w-4 h-4 text-green-500" />
-          <span className="text-sm font-medium text-green-700">Webhook aktiv</span>
-        </div>
-        <InfoRow
-          label="Webhook URL"
-          value="hausverwaltung-platform.onrender.com/webhook/retell"
-          mono
-        />
-        <InfoRow label="Hosting" value="Render.com" />
-        <InfoRow label="Trigger" value="call_ended, call_analyzed" />
-      </Section>
-
-      {/* Supabase */}
+      {/* Datenbank */}
       <Section
         title="Datenbank"
-        description="Supabase PostgreSQL – Speicherung aller Anrufe und Tickets"
+        description="Sichere Speicherung aller Anrufe, Tickets und Kontakte"
       >
         <div className="flex items-center gap-3 mb-4">
           <Shield className="w-4 h-4 text-blue-500" />
-          <span className="text-sm font-medium text-blue-700">Verbindung aktiv (Service Role)</span>
+          <span className="text-sm font-medium text-blue-700">Verbindung aktiv</span>
         </div>
-        <InfoRow label="Anbieter" value="Supabase" />
-        <InfoRow label="Region" value="eu-west-1 (Frankfurt)" />
-        <InfoRow label="Tabellen" value="calls, tickets, tenants" />
+        <InfoRow label="Region" value="EU (Frankfurt)" />
+        <InfoRow label="Status" value="Online" />
       </Section>
 
       {/* E-Mail */}
@@ -265,22 +245,12 @@ export default function EinstellungenPage() {
           <span className="text-sm font-medium text-slate-400">Noch nicht konfiguriert</span>
         </div>
         <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-          <p className="text-sm text-amber-700 font-medium mb-1">SMTP noch nicht eingerichtet</p>
+          <p className="text-sm text-amber-700 font-medium mb-1">E-Mail noch nicht eingerichtet</p>
           <p className="text-xs text-amber-600">
-            Um E-Mail-Benachrichtigungen zu aktivieren, konfiguriere die SMTP-Umgebungsvariablen in Render:
-            SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+            Konfigurieren Sie E-Mail-Benachrichtigungen unter Integrationen, um bei neuen Anrufen und Tickets benachrichtigt zu werden.
           </p>
         </div>
       </Section>
-
-      {/* Info */}
-      <div className="bg-slate-100 rounded-2xl px-6 py-5 flex items-start gap-3">
-        <Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-        <p className="text-xs text-slate-500 leading-relaxed">
-          Einstellungen werden direkt in den Umgebungsvariablen des Backends (Render.com) und in Retell AI konfiguriert.
-          Änderungen an Lisa's Verhalten können im Retell AI Dashboard vorgenommen werden.
-        </p>
-      </div>
     </div>
   )
 }

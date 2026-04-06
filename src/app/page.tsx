@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
-  Phone, Ticket, Clock, TrendingUp, ArrowRight, PhoneCall, PhoneMissed,
-  Users, ListTodo, Timer, PhoneForwarded, AlertTriangle, CalendarClock, Inbox,
+  Phone, Ticket, Clock, TrendingUp, ArrowRight, PhoneMissed,
+  Users, ListTodo, PhoneForwarded, AlertTriangle, CalendarClock, Inbox,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -147,20 +147,12 @@ export default function DashboardPage() {
       </div>
 
       {/* ImmoGreta status banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-5 py-5 lg:px-8 lg:py-6 mb-6 flex items-center justify-between shadow-lg">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <PulsingDot />
-            <span className="text-blue-100 text-sm font-semibold">ImmoGreta ist aktiv</span>
-          </div>
-          <h2 className="text-white font-bold text-lg lg:text-xl mb-1">Ihre KI-Assistentin nimmt Anrufe entgegen</h2>
-          <p className="text-blue-100 text-xs lg:text-sm">+1 (662) 439-4944 · Automatische Ticket-Erstellung</p>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-5 py-5 lg:px-8 lg:py-6 mb-6 shadow-lg">
+        <div className="flex items-center gap-2 mb-1">
+          <PulsingDot />
+          <span className="text-blue-100 text-sm font-semibold">ImmoGreta ist aktiv</span>
         </div>
-        <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 ml-4">
-          <div className="animate-bounce">
-            <PhoneCall className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
-          </div>
-        </div>
+        <p className="text-blue-100 text-xs lg:text-sm">+1 (662) 439-4944</p>
       </div>
 
       {/* KPI Grid */}

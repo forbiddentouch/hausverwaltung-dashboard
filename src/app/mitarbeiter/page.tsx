@@ -40,38 +40,6 @@ const AVATAR_COLORS = [
   'bg-teal-500',
 ];
 
-const SEED_DATA: Staff[] = [
-  {
-    id: '1',
-    vorname: 'Max',
-    nachname: 'Mustermann',
-    email: 'max.mustermann@hausverwaltung.de',
-    telefon: '+49 30 123456789',
-    themen: ['Heizung', 'Notfall'],
-    erreichbar: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    vorname: 'Anna',
-    nachname: 'Schmidt',
-    email: 'anna.schmidt@hausverwaltung.de',
-    telefon: '+49 30 987654321',
-    themen: ['Allgemein', 'Neukunden'],
-    erreichbar: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    vorname: 'Tom',
-    nachname: 'Weber',
-    email: 'tom.weber@hausverwaltung.de',
-    telefon: '+49 30 555666777',
-    themen: ['Wartung', 'Sonstiges'],
-    erreichbar: false,
-    createdAt: new Date().toISOString(),
-  },
-];
 
 function getAvatarColor(id: string): string {
   const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -126,9 +94,9 @@ export default function MitarbeiterPage() {
       if (!oid) {
         const stored = localStorage.getItem('immogreta_mitarbeiter');
         if (stored) {
-          try { setStaff(JSON.parse(stored)); } catch { setStaff(SEED_DATA); }
+          try { setStaff(JSON.parse(stored)); } catch { setStaff([]); }
         } else {
-          setStaff(SEED_DATA);
+          setStaff([]);
         }
         hasLoaded.current = true;
         return;
@@ -145,9 +113,9 @@ export default function MitarbeiterPage() {
     } catch {
       const stored = localStorage.getItem('immogreta_mitarbeiter');
       if (stored) {
-        try { setStaff(JSON.parse(stored)); } catch { setStaff(SEED_DATA); }
+        try { setStaff(JSON.parse(stored)); } catch { setStaff([]); }
       } else {
-        setStaff(SEED_DATA);
+        setStaff([]);
       }
     }
     hasLoaded.current = true;

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import {
-  Link2, Phone, Database, Mail, Globe, Check, X, ExternalLink,
-  Webhook, Building2, ArrowRight, Copy, Loader2,
+  Link2, Phone, Database, Mail, Globe, Check,
+  Building2, ArrowRight, Loader2, Mic,
 } from 'lucide-react'
 
 interface Integration {
@@ -15,15 +15,15 @@ interface Integration {
   bg: string
   border: string
   connected: boolean
-  category: 'telefon' | 'crm' | 'email' | 'webhook'
+  category: 'telefon' | 'hausverwaltung' | 'benachrichtigung'
   configFields?: { key: string; label: string; placeholder: string; type?: string }[]
 }
 
 const INTEGRATIONS: Integration[] = [
   {
-    id: 'retell',
-    name: 'Retell AI',
-    description: 'KI-Telefonsystem für automatische Anrufannahme und Transkripte',
+    id: 'telefon',
+    name: 'Telefon & KI-Stimme',
+    description: 'Konfigurieren Sie Ihre KI-Assistentin für die automatische Anrufannahme',
     icon: Phone,
     color: 'text-blue-600',
     bg: 'bg-blue-50',
@@ -31,52 +31,31 @@ const INTEGRATIONS: Integration[] = [
     connected: false,
     category: 'telefon',
     configFields: [
-      { key: 'api_key', label: 'API Key', placeholder: 'ret_xxxxxxxxxxxxxxxx', type: 'password' },
-      { key: 'agent_id', label: 'Agent ID', placeholder: 'agent_xxxxxxxx' },
+      { key: 'api_key', label: 'Zugangsschlüssel', placeholder: 'Wird von ImmoGreta bereitgestellt', type: 'password' },
+      { key: 'agent_id', label: 'Assistenten-ID', placeholder: 'Wird von ImmoGreta bereitgestellt' },
     ],
   },
   {
-    id: 'supabase',
-    name: 'Supabase',
-    description: 'Datenbank und Authentifizierung für Ihre Hausverwaltung',
+    id: 'stimme',
+    name: 'Stimmenauswahl',
+    description: 'Wählen Sie die Stimme Ihrer KI-Assistentin',
+    icon: Mic,
+    color: 'text-violet-600',
+    bg: 'bg-violet-50',
+    border: 'border-violet-200',
+    connected: false,
+    category: 'telefon',
+  },
+  {
+    id: 'datenbank',
+    name: 'Datenbank',
+    description: 'Ihre sichere Datenbank für Anrufe, Tickets und Kontakte',
     icon: Database,
     color: 'text-emerald-600',
     bg: 'bg-emerald-50',
     border: 'border-emerald-200',
     connected: true,
-    category: 'crm',
-  },
-  {
-    id: 'webhook',
-    name: 'Webhook',
-    description: 'Senden Sie Anruf-Events an Ihr eigenes System (CRM, ERP, etc.)',
-    icon: Webhook,
-    color: 'text-violet-600',
-    bg: 'bg-violet-50',
-    border: 'border-violet-200',
-    connected: false,
-    category: 'webhook',
-    configFields: [
-      { key: 'url', label: 'Webhook URL', placeholder: 'https://ihr-system.de/api/webhook' },
-      { key: 'secret', label: 'Secret (optional)', placeholder: 'whsec_xxxxxxxx', type: 'password' },
-    ],
-  },
-  {
-    id: 'smtp',
-    name: 'E-Mail (SMTP)',
-    description: 'Automatische E-Mail-Benachrichtigungen bei neuen Anrufen oder Tickets',
-    icon: Mail,
-    color: 'text-orange-600',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    connected: false,
-    category: 'email',
-    configFields: [
-      { key: 'host', label: 'SMTP Host', placeholder: 'smtp.gmail.com' },
-      { key: 'port', label: 'Port', placeholder: '587' },
-      { key: 'user', label: 'Benutzername', placeholder: 'email@firma.de' },
-      { key: 'pass', label: 'Passwort', placeholder: '••••••••', type: 'password' },
-    ],
+    category: 'hausverwaltung',
   },
   {
     id: 'haufe',
@@ -87,10 +66,11 @@ const INTEGRATIONS: Integration[] = [
     bg: 'bg-sky-50',
     border: 'border-sky-200',
     connected: false,
-    category: 'crm',
+    category: 'hausverwaltung',
     configFields: [
-      { key: 'api_url', label: 'API URL', placeholder: 'https://api.haufe.de/v1' },
-      { key: 'api_key', label: 'API Key', placeholder: 'hf_xxxxxxxx', type: 'password' },
+      { key: 'server', label: 'Server-Adresse', placeholder: 'Von Ihrem IT-Anbieter' },
+      { key: 'username', label: 'Benutzername', placeholder: 'Ihr Benutzername' },
+      { key: 'password', label: 'Passwort', placeholder: '••••••••', type: 'password' },
     ],
   },
   {
@@ -102,35 +82,51 @@ const INTEGRATIONS: Integration[] = [
     bg: 'bg-indigo-50',
     border: 'border-indigo-200',
     connected: false,
-    category: 'crm',
+    category: 'hausverwaltung',
     configFields: [
-      { key: 'server', label: 'Server URL', placeholder: 'https://wodis.aareon.com' },
-      { key: 'username', label: 'Benutzername', placeholder: 'admin@firma.de' },
+      { key: 'server', label: 'Server-Adresse', placeholder: 'Von Ihrem IT-Anbieter' },
+      { key: 'username', label: 'Benutzername', placeholder: 'Ihr Benutzername' },
       { key: 'password', label: 'Passwort', placeholder: '••••••••', type: 'password' },
     ],
   },
   {
-    id: 'custom_api',
-    name: 'Eigene API',
-    description: 'Verbinden Sie Ihr eigenes System über eine REST-API',
+    id: 'eigenes_system',
+    name: 'Eigenes System',
+    description: 'Verbinden Sie Ihr bestehendes Hausverwaltungs-System',
     icon: Globe,
     color: 'text-slate-600',
     bg: 'bg-slate-50',
     border: 'border-slate-200',
     connected: false,
-    category: 'webhook',
+    category: 'hausverwaltung',
     configFields: [
-      { key: 'base_url', label: 'Base URL', placeholder: 'https://api.ihr-system.de' },
-      { key: 'api_key', label: 'API Key', placeholder: 'key_xxxxxxxx', type: 'password' },
+      { key: 'base_url', label: 'Server-Adresse', placeholder: 'Adresse Ihres Systems' },
+      { key: 'api_key', label: 'Zugangsschlüssel', placeholder: 'Von Ihrem IT-Anbieter', type: 'password' },
+    ],
+  },
+  {
+    id: 'email',
+    name: 'E-Mail-Benachrichtigungen',
+    description: 'Automatische E-Mails bei neuen Anrufen, Tickets oder Rückrufen',
+    icon: Mail,
+    color: 'text-orange-600',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    connected: false,
+    category: 'benachrichtigung',
+    configFields: [
+      { key: 'host', label: 'E-Mail-Server', placeholder: 'z.B. smtp.gmail.com' },
+      { key: 'port', label: 'Port', placeholder: '587' },
+      { key: 'user', label: 'E-Mail-Adresse', placeholder: 'email@firma.de' },
+      { key: 'pass', label: 'Passwort', placeholder: '••••••••', type: 'password' },
     ],
   },
 ]
 
 const CATEGORIES: Record<string, string> = {
-  telefon: 'Telefonie',
-  crm: 'Hausverwaltungs-Systeme',
-  email: 'E-Mail',
-  webhook: 'Webhooks & APIs',
+  telefon: 'Telefonie & KI',
+  hausverwaltung: 'Hausverwaltungs-Systeme',
+  benachrichtigung: 'Benachrichtigungen',
 }
 
 export default function IntegrationenPage() {
@@ -152,7 +148,6 @@ export default function IntegrationenPage() {
 
   const handleSave = async (id: string) => {
     setSaving(true)
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
     setIntegrations(prev =>
       prev.map(i => i.id === id ? { ...i, connected: true } : i)
@@ -180,7 +175,6 @@ export default function IntegrationenPage() {
         </p>
       </div>
 
-      {/* Connected count */}
       <div className="flex items-center gap-3 mb-6">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
           <Check className="w-4 h-4 text-emerald-600" />
@@ -196,7 +190,6 @@ export default function IntegrationenPage() {
         </div>
       </div>
 
-      {/* Integration list by category */}
       <div className="space-y-8">
         {categories.map(cat => (
           <div key={cat}>
@@ -247,13 +240,12 @@ export default function IntegrationenPage() {
                           </button>
                         ) : (
                           <span className="px-3 py-1.5 bg-slate-100 text-slate-500 text-xs font-medium rounded-lg">
-                            Automatisch
+                            Bald verfügbar
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Config form */}
                     {isConfiguring && integration.configFields && (
                       <div className="px-4 lg:px-5 pb-4 lg:pb-5 pt-0 border-t border-slate-100">
                         <div className="mt-4 space-y-3">

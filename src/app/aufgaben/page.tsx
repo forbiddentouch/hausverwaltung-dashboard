@@ -19,16 +19,6 @@ interface Toast {
   message: string;
 }
 
-const seedTasks: Task[] = [
-  { id: '1', icon: '🔥', name: 'Heizungsprobleme', description: 'Heizungsprobleme und Wartung', enabled: true, color: 'orange', createdAt: new Date().toISOString() },
-  { id: '2', icon: '🚨', name: 'Notdienst', description: 'Notfalldienst und Notfälle', enabled: true, color: 'red', createdAt: new Date().toISOString() },
-  { id: '3', icon: '👥', name: 'Mitarbeiteranfragen', description: 'Anfragen von Mitarbeitern', enabled: true, color: 'blue', createdAt: new Date().toISOString() },
-  { id: '4', icon: '💼', name: 'Verkaufs- und Akquiseanrufe', description: 'Verkaufs- und Geschäftsentwicklung', enabled: true, color: 'green', createdAt: new Date().toISOString() },
-  { id: '5', icon: '✨', name: 'Neukundenanfragen', description: 'Anfragen von neuen Kunden', enabled: true, color: 'yellow', createdAt: new Date().toISOString() },
-  { id: '6', icon: '📋', name: 'Unternehmensauskunft', description: 'Unternehmensauskünfte', enabled: true, color: 'teal', createdAt: new Date().toISOString() },
-  { id: '7', icon: '📞', name: 'Rückrufvereinbarung', description: 'Rückrufvereinbarungen', enabled: true, color: 'purple', createdAt: new Date().toISOString() },
-  { id: '8', icon: '🎯', name: 'Bewerbungsanfragen', description: 'Anfragen für Bewerbungen', enabled: true, color: 'gray', createdAt: new Date().toISOString() },
-];
 
 const colorClasses: Record<string, string> = {
   orange: 'bg-orange-50', red: 'bg-red-50', yellow: 'bg-yellow-50', blue: 'bg-blue-50',
@@ -72,8 +62,8 @@ export default function AufgabenPage() {
       const oid = await getOrganizationId();
       if (!oid) {
         const stored = localStorage.getItem('immogreta_aufgaben');
-        if (stored) { try { setTasks(JSON.parse(stored)); } catch { setTasks(seedTasks); } }
-        else setTasks(seedTasks);
+        if (stored) { try { setTasks(JSON.parse(stored)); } catch { setTasks([]); } }
+        else setTasks([]);
         hasLoaded.current = true;
         return;
       }
@@ -88,8 +78,8 @@ export default function AufgabenPage() {
       setTasks((data || []).map(dbRowToTask));
     } catch {
       const stored = localStorage.getItem('immogreta_aufgaben');
-      if (stored) { try { setTasks(JSON.parse(stored)); } catch { setTasks(seedTasks); } }
-      else setTasks(seedTasks);
+      if (stored) { try { setTasks(JSON.parse(stored)); } catch { setTasks([]); } }
+      else setTasks([]);
     }
     hasLoaded.current = true;
   }, []);

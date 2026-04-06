@@ -16,52 +16,6 @@ interface Appointment {
   createdAt: string
 }
 
-const SEED_APPOINTMENTS: Appointment[] = [
-  {
-    id: '1',
-    name: 'Klaus Müller',
-    telefon: '+49 30 123456',
-    datum: new Date().toISOString().split('T')[0],
-    uhrzeit: '15:30',
-    typ: 'Rückruf',
-    notizen: 'Frage wegen Nebenkostenabrechnung',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'Petra Wagner',
-    telefon: '+49 40 654321',
-    datum: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    uhrzeit: '10:00',
-    typ: 'Termin',
-    notizen: 'Mietvertrag besprechen',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    name: 'Robert Schneider',
-    telefon: '+49 69 789012',
-    datum: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-    uhrzeit: '14:15',
-    typ: 'Besichtigung',
-    notizen: 'Wohnung 3. OG, Interessent aus München',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    name: 'Maria Hofmann',
-    telefon: '+49 89 321654',
-    datum: new Date(Date.now() + 432000000).toISOString().split('T')[0],
-    uhrzeit: '09:00',
-    typ: 'Termin',
-    notizen: 'Übergabe der neuen Wohnung',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-]
 
 const TYP_CONFIG: Record<string, { color: string; bg: string; border: string; emoji: string }> = {
   'Rückruf':      { color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200',   emoji: '📞' },
@@ -171,8 +125,8 @@ export default function KalenderPage() {
       const oid = await getOrganizationId()
       if (!oid) {
         const stored = localStorage.getItem('immogreta_kalender')
-        if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments(SEED_APPOINTMENTS) } }
-        else setAppointments(SEED_APPOINTMENTS)
+        if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments([]) } }
+        else setAppointments([])
         hasLoaded.current = true
         return
       }
@@ -187,8 +141,8 @@ export default function KalenderPage() {
       setAppointments((data || []).map(dbRowToAppointment))
     } catch {
       const stored = localStorage.getItem('immogreta_kalender')
-      if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments(SEED_APPOINTMENTS) } }
-      else setAppointments(SEED_APPOINTMENTS)
+      if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments([]) } }
+      else setAppointments([])
     }
     hasLoaded.current = true
   }, [])

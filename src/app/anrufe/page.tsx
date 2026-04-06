@@ -33,93 +33,6 @@ type Call = {
   transcript: string | null
 }
 
-// Demo data
-const demoCalls: Call[] = [
-  {
-    id: '1',
-    caller_number: '+49 170 1234567',
-    caller_name: 'Klaus Brenner',
-    duration: 180,
-    started_at: new Date().toISOString(),
-    status: 'new',
-    task: 'Heizungsprobleme aufnehmen',
-    task_icon: '🔥',
-    task_color: 'orange',
-    summary: 'Kunde klagt über Heizungsausfall seit 2 Tagen. Termin für Techniker gewünscht.',
-    mood: 'Ruhig',
-    transcript: null,
-  },
-  {
-    id: '2',
-    caller_number: '+49 163 9876543',
-    caller_name: 'Tanja Feldmann',
-    duration: 145,
-    started_at: new Date(Date.now() - 86400000).toISOString(),
-    status: 'new',
-    task: 'Mitarbeiteranfragen',
-    task_icon: '👤',
-    task_color: 'blue',
-    summary: 'Allgemeine Auskunft zur Wärmepumpe gewünscht.',
-    mood: 'Freundlich',
-    transcript: null,
-  },
-  {
-    id: '3',
-    caller_number: '+49 152 5555444',
-    caller_name: 'Mehmet Yilmaz',
-    duration: 90,
-    started_at: new Date(Date.now() - 86400000).toISOString(),
-    status: 'new',
-    task: 'Neukundenanfragen aufnehmen',
-    task_icon: '✨',
-    task_color: 'green',
-    summary: 'Neukunde interessiert an Angebot für Wärmepumpe.',
-    mood: 'Interessiert',
-    transcript: null,
-  },
-  {
-    id: '4',
-    caller_number: '+49 177 3214321',
-    caller_name: 'Anna-Maria Krüger',
-    duration: 210,
-    started_at: new Date(Date.now() - 86400000).toISOString(),
-    status: 'in_progress',
-    task: 'Verkaufs- und Akquiseanrufe',
-    task_icon: '💰',
-    task_color: 'green',
-    summary: 'Angebotsanfrage für Preisnachfrage. Angebotsdokument soll zugesendet werden.',
-    mood: 'Geschäftlich',
-    transcript: null,
-  },
-  {
-    id: '5',
-    caller_number: '+49 151 7778889',
-    caller_name: 'Holger Steinmetz',
-    duration: 167,
-    started_at: new Date(Date.now() - 86400000).toISOString(),
-    status: 'new',
-    task: 'Heizungsprobleme aufnehmen',
-    task_icon: '🔥',
-    task_color: 'orange',
-    summary: 'Störungsmeldung Heizung. Keine Warmwasserversorgung.',
-    mood: 'Besorgt',
-    transcript: null,
-  },
-  {
-    id: '6',
-    caller_number: '+49 160 1112223',
-    caller_name: 'Nadine Hofstetter',
-    duration: 245,
-    started_at: new Date(Date.now() - 86400000).toISOString(),
-    status: 'done',
-    task: 'Notfall',
-    task_icon: '🚨',
-    task_color: 'red',
-    summary: 'Notfall: Heizungsrohrbruch. Sofortiger Techniker angefordert. Reklamation eingereicht.',
-    mood: 'Aufgeregt',
-    transcript: null,
-  },
-]
 
 function formatDuration(sec: number | null) {
   if (!sec) return '—'
@@ -263,8 +176,8 @@ const tabs = [
 ]
 
 export default function AnrufePage() {
-  const [calls, setCalls] = useState<Call[]>(demoCalls)
-  const [loading, setLoading] = useState(false)
+  const [calls, setCalls] = useState<Call[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
   const [showShortCalls, setShowShortCalls] = useState(false)
@@ -280,9 +193,7 @@ export default function AnrufePage() {
           .order('started_at', { ascending: false })
           .limit(100)
 
-        if (data && data.length > 0) {
-          setCalls(data as any[])
-        }
+        setCalls((data ?? []) as any[])
       } catch (error) {
         console.error('Error loading calls:', error)
       } finally {
@@ -382,9 +293,14 @@ export default function AnrufePage() {
         {loading ? (
           <div className="text-center py-12 text-slate-400">Lädt...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-16">
             <Phone className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-600 text-sm">Keine Anrufe gefunden</p>
+            <p className="text-slate-600 text-sm font-medium">
+              {calls.length === 0 ? 'Noch keine Anrufe' : 'Keine Anrufe für diesen Filter'}
+            </p>
+            {calls.length === 0 && (
+              <p className="text-slate-400 text-xs mt-2">Anrufe erscheinen hier automatisch, sobald ImmoGreta Gespräche führt.</p>
+            )}
           </div>
         ) : (
           <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -402,10 +318,10 @@ export default function AnrufePage() {
               {filtered.map(call => {
                 const colors = getTaskColor(call.task_color)
                 return (
-                  <button
+                  <div
                     key={call.id}
                     onClick={() => setSelectedCall(call)}
-                    className="w-full flex flex-col gap-2 px-4 py-3 lg:grid lg:grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] lg:items-center lg:px-5 lg:py-4 hover:bg-slate-50 transition-colors text-left"
+                    className="w-full flex flex-col gap-2 px-4 py-3 lg:grid lg:grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] lg:items-center lg:px-5 lg:py-4 hover:bg-slate-50 transition-colors text-left cursor-pointer"
                   >
                     {/* Top row mobile: Kontakt + Status */}
                     <div className="flex items-center gap-3 min-w-0">
@@ -466,7 +382,7 @@ export default function AnrufePage() {
                         {call.status === 'new' ? 'Neu' : call.status === 'in_progress' ? 'In Bearbeitung' : 'Erledigt'}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 )
               })}
             </div>
