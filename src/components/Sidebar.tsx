@@ -7,19 +7,21 @@ import { signOut } from '@/lib/auth'
 import {
   ChevronRight, Phone, Users, UserCheck, Calendar,
   Settings, ListTodo, Palette, Copy, LogOut, Menu, X,
+  LayoutDashboard, Link2,
 } from 'lucide-react'
 
 const menuItems = [
-  { href: '/anrufe',      label: 'Anrufe',      icon: Phone },
+  { href: '/',            label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/anrufe',      label: 'Anrufe',       icon: Phone },
   { href: '/kontakte',    label: 'Kontakte',     icon: Users },
   { href: '/mitarbeiter', label: 'Mitarbeiter',  icon: UserCheck },
-  { href: '/kalender',    label: 'Kalender',     icon: Calendar, badge: 'Neu' },
+  { href: '/kalender',    label: 'Kalender',     icon: Calendar },
 ]
 
 const optionItems = [
-  { href: '/einstellungen', label: 'Einstellungen', icon: Settings },
-  { href: '/aufgaben',      label: 'Aufgaben',       icon: ListTodo },
-  { href: '/stil',          label: 'Stil',           icon: Palette },
+  { href: '/einstellungen',   label: 'Einstellungen',  icon: Settings },
+  { href: '/integrationen',   label: 'Integrationen',  icon: Link2 },
+  { href: '/aufgaben',        label: 'Aufgaben',       icon: ListTodo },
 ]
 
 export default function Sidebar() {
@@ -44,7 +46,7 @@ export default function Sidebar() {
   }, [pathname])
 
   const isActive = (href: string) =>
-    pathname === href || (href !== '/' && pathname.startsWith(href))
+    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href)
 
   const NavLink = ({
     href, label, icon: Icon, badge,
@@ -81,7 +83,7 @@ export default function Sidebar() {
       {/* Branding */}
       <div className="px-4 py-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
+          <Link href="/" className="flex items-center gap-3 flex-1 min-w-0" onClick={() => setMobileOpen(false)}>
             <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/greta-avatar.png" alt="ImmoGreta" width={36} height={36} className="w-full h-full object-cover object-top" />
@@ -90,16 +92,12 @@ export default function Sidebar() {
               <p className="font-bold text-slate-900 text-sm leading-tight">ImmoGreta</p>
               <p className="text-xs text-slate-500 leading-tight">Hausverwaltung</p>
             </div>
-          </div>
-          {/* Close button on mobile, chevron on desktop */}
+          </Link>
           <button
             onClick={() => setMobileOpen(false)}
             className="p-1 hover:bg-gray-100 rounded transition-colors lg:hidden"
           >
             <X className="w-4 h-4 text-slate-400" />
-          </button>
-          <button className="p-1 hover:bg-gray-100 rounded transition-colors hidden lg:block">
-            <ChevronRight className="w-4 h-4 text-slate-400" />
           </button>
         </div>
       </div>

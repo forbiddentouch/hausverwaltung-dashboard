@@ -387,9 +387,9 @@ export default function AnrufePage() {
             <p className="text-slate-600 text-sm">Keine Anrufe gefunden</p>
           </div>
         ) : (
-          <div className="space-y-1 border border-slate-200 rounded-lg overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            {/* Table header - desktop only */}
+            <div className="hidden lg:grid grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
               <div>Kontakt</div>
               <div>Aufgabe</div>
               <div>Dauer</div>
@@ -398,52 +398,64 @@ export default function AnrufePage() {
             </div>
 
             {/* Table rows */}
-            <div>
+            <div className="divide-y divide-slate-100">
               {filtered.map(call => {
                 const colors = getTaskColor(call.task_color)
                 return (
                   <button
                     key={call.id}
                     onClick={() => setSelectedCall(call)}
-                    className="w-full grid grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
+                    className="w-full flex flex-col gap-2 px-4 py-3 lg:grid lg:grid-cols-[2fr_2.5fr_1.5fr_1.5fr_1fr] lg:items-center lg:px-5 lg:py-4 hover:bg-slate-50 transition-colors text-left"
                   >
-                    {/* Kontakt */}
-                    <div className="flex items-start gap-3 min-w-0">
+                    {/* Top row mobile: Kontakt + Status */}
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-slate-600">
                         {call.caller_name?.[0] || call.caller_number?.[0] || 'U'}
                       </div>
-                      <div className="min-w-0">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-900 truncate">
                           {call.caller_name || call.caller_number || 'Unbekannt'}
                         </p>
-                        <p className="text-xs text-slate-400 truncate">
+                        <p className="text-xs text-slate-400 truncate lg:block hidden">
                           {call.caller_number}
                         </p>
+                        <p className="text-xs text-slate-400 lg:hidden">
+                          {formatDuration(call.duration)} · {formatDate(call.started_at)}
+                        </p>
+                      </div>
+                      <div className={`px-2.5 py-1 rounded-full text-xs font-medium lg:hidden ${
+                        call.status === 'new'
+                          ? 'bg-blue-100 text-blue-700'
+                          : call.status === 'in_progress'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {call.status === 'new' ? 'Neu' : call.status === 'in_progress' ? 'In Bearb.' : 'Erledigt'}
                       </div>
                     </div>
 
                     {/* Aufgabe */}
-                    <div className="flex items-start">
+                    <div className="flex items-start lg:justify-start">
                       <div
-                        className={`px-3 py-1.5 rounded-lg border ${colors.bg} ${colors.text} ${colors.border} text-sm font-medium flex items-center gap-1.5`}
+                        className={`px-3 py-1.5 rounded-lg border ${colors.bg} ${colors.text} ${colors.border} text-xs lg:text-sm font-medium flex items-center gap-1.5`}
                       >
                         <span>{call.task_icon}</span>
-                        <span>{call.task}</span>
+                        <span className="truncate">{call.task}</span>
                       </div>
                     </div>
 
-                    {/* Dauer */}
-                    <div className="text-sm text-slate-600 font-medium">
+                    {/* Dauer - desktop only */}
+                    <div className="hidden lg:block text-sm text-slate-600 font-medium">
                       {formatDuration(call.duration)}
                     </div>
 
-                    {/* Datum */}
-                    <div className="text-sm text-slate-600">
+                    {/* Datum - desktop only */}
+                    <div className="hidden lg:block text-sm text-slate-600">
                       <div className="font-medium">{formatDate(call.started_at)}</div>
                     </div>
 
-                    {/* Status */}
-                    <div className="flex items-center gap-2">
+                    {/* Status - desktop only */}
+                    <div className="hidden lg:flex items-center gap-2">
                       <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                         call.status === 'new'
                           ? 'bg-blue-100 text-blue-700'
@@ -464,7 +476,7 @@ export default function AnrufePage() {
 
       {/* Right side detail panel */}
       {selectedCall && (
-        <div className="fixed right-0 top-0 h-screen w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-auto">
+        <div className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-auto">
           {/* Header with close button */}
           <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
             <h2 className="text-lg font-semibold text-slate-900">Details</h2>

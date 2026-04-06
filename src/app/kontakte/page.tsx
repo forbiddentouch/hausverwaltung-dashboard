@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote, Download, Upload } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote, Download, Upload, FileUp } from 'lucide-react'
 import { supabase, getOrganizationId } from '@/lib/supabase'
 
 interface Contact {
@@ -360,6 +360,8 @@ export default function KontaktePage() {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined)
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounter = useRef(0)
   const [useDB, setUseDB] = useState(false)
   const [orgId, setOrgId] = useState<string | null>(null)
 
@@ -499,9 +501,11 @@ export default function KontaktePage() {
     showFeedback('Kontakte exportiert')
   }
 
-  async function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  function processCSVFile(file: File) {
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      showFeedback('Bitte nur CSV-Dateien hochladen')
+      return
+    }
 
     const reader = new FileReader()
     reader.onload = async (event) => {
@@ -580,7 +584,41 @@ export default function KontaktePage() {
       }
     }
     reader.readAsText(file)
+  }
+
+  function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    processCSVFile(file)
     e.target.value = ''
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) setIsDragging(false)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounter.current = 0
+    const file = e.dataTransfer.files?.[0]
+    if (file) processCSVFile(file)
   }
 
   const filteredContacts = contacts.filter(c => {
@@ -591,7 +629,24 @@ export default function KontaktePage() {
   })
 
   return (
-    <div className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'lg:mr-96' : ''}`}>
+    <div
+      className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'lg:mr-96' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 bg-blue-600/20 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-2xl shadow-2xl p-10 text-center border-2 border-dashed border-blue-500">
+            <FileUp className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+            <p className="text-lg font-semibold text-slate-800">CSV-Datei hier ablegen</p>
+            <p className="text-sm text-slate-500 mt-1">Kontakte werden automatisch importiert</p>
+          </div>
+        </div>
+      )}
+
       {savedFeedback && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg shadow-lg text-sm font-medium">
           <Check className="w-4 h-4" />
