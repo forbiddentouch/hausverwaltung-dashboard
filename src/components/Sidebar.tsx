@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from '@/lib/auth'
 import {
   ChevronRight,
   Phone,
@@ -12,6 +13,7 @@ import {
   ListTodo,
   Palette,
   Copy,
+  LogOut,
 } from 'lucide-react'
 
 const menuItems = [
@@ -133,6 +135,15 @@ export default function Sidebar() {
         <Link href="#" className="block text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors">
           Hilfe benötigt? →
         </Link>
+
+        {/* Logout */}
+        <button
+          onClick={() => signOut()}
+          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Abmelden
+        </button>
       </div>
     </aside>
   )
