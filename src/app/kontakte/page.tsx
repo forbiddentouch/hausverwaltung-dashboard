@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote, Download, Upload } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Search, Plus, Edit2, Trash2, X, Users, Check, Phone, Mail, MapPin, StickyNote, Download, Upload, FileUp } from 'lucide-react'
+import { supabase, getOrganizationId } from '@/lib/supabase'
 
 interface Contact {
   id: string
@@ -43,7 +44,7 @@ function generateId(): string {
   return 'k_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
 }
 
-function loadContacts(): Contact[] {
+function loadLocalContacts(): Contact[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? JSON.parse(raw) : []
@@ -52,11 +53,30 @@ function loadContacts(): Contact[] {
   }
 }
 
-function saveContacts(contacts: Contact[]) {
+function saveLocalContacts(contacts: Contact[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts))
   } catch {
     console.error('Fehler beim Speichern')
+  }
+}
+
+// Map Supabase tenant row to Contact
+function tenantToContact(t: Record<string, unknown>): Contact {
+  const name = (t.name as string) || ''
+  const parts = name.split(' ')
+  return {
+    id: t.id as string,
+    vorname: parts[0] || '',
+    nachname: parts.slice(1).join(' ') || '',
+    telefon: (t.telefon as string) || (t.phone_number as string) || '',
+    email: (t.email as string) || '',
+    strasse: (t.strasse as string) || '',
+    hausnummer: (t.hausnummer as string) || '',
+    plz: (t.plz as string) || '',
+    stadt: (t.stadt as string) || '',
+    notizen: (t.notizen as string) || '',
+    createdAt: (t.created_at as string) || new Date().toISOString(),
   }
 }
 
@@ -237,7 +257,7 @@ function DetailPanel({ contact, onClose, onEdit, onDelete }: DetailPanelProps) {
   ].filter(Boolean).join(', ')
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl z-40 flex flex-col">
+    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-40 flex flex-col">
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <h3 className="font-semibold text-slate-800">Kontaktdetails</h3>
         <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -340,43 +360,109 @@ export default function KontaktePage() {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined)
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounter = useRef(0)
+  const [useDB, setUseDB] = useState(false)
+  const [orgId, setOrgId] = useState<string | null>(null)
+
+  const loadFromSupabase = useCallback(async () => {
+    try {
+      const oid = await getOrganizationId()
+      if (!oid) {
+        setContacts(loadLocalContacts())
+        return
+      }
+      setOrgId(oid)
+      setUseDB(true)
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('organization_id', oid)
+        .order('name')
+      if (error) throw error
+      setContacts((data || []).map(tenantToContact))
+    } catch {
+      setContacts(loadLocalContacts())
+    }
+  }, [])
 
   useEffect(() => {
-    setContacts(loadContacts())
-  }, [])
+    loadFromSupabase()
+  }, [loadFromSupabase])
 
   function showFeedback(msg: string) {
     setSavedFeedback(msg)
     setTimeout(() => setSavedFeedback(null), 2500)
   }
 
-  function handleAddContact(data: typeof emptyForm) {
-    const newContact: Contact = { id: generateId(), ...data, createdAt: new Date().toISOString() }
-    const updated = [...contacts, newContact].sort((a, b) =>
-      (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
-    setContacts(updated)
-    saveContacts(updated)
+  async function handleAddContact(data: typeof emptyForm) {
+    if (useDB && orgId) {
+      const { data: inserted, error } = await supabase.from('tenants').insert({
+        organization_id: orgId,
+        name: `${data.vorname} ${data.nachname}`.trim(),
+        telefon: data.telefon || null,
+        email: data.email || null,
+        strasse: data.strasse || null,
+        hausnummer: data.hausnummer || null,
+        plz: data.plz || null,
+        stadt: data.stadt || null,
+        notizen: data.notizen || null,
+      }).select().single()
+      if (!error && inserted) {
+        setContacts(prev => [...prev, tenantToContact(inserted)].sort((a, b) =>
+          (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname)))
+      }
+    } else {
+      const newContact: Contact = { id: generateId(), ...data, createdAt: new Date().toISOString() }
+      const updated = [...contacts, newContact].sort((a, b) =>
+        (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+      setContacts(updated)
+      saveLocalContacts(updated)
+    }
     setModalOpen(false)
     showFeedback('Kontakt angelegt')
   }
 
-  function handleEditContact(data: typeof emptyForm) {
+  async function handleEditContact(data: typeof emptyForm) {
     if (!editingContact) return
-    const updated = contacts.map(c => c.id === editingContact.id ? { ...c, ...data } : c)
-      .sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
-    setContacts(updated)
-    saveContacts(updated)
-    const updatedContact = updated.find(c => c.id === editingContact.id)
-    if (updatedContact) setSelectedContact(updatedContact)
+    if (useDB && orgId) {
+      const { error } = await supabase.from('tenants').update({
+        name: `${data.vorname} ${data.nachname}`.trim(),
+        telefon: data.telefon || null,
+        email: data.email || null,
+        strasse: data.strasse || null,
+        hausnummer: data.hausnummer || null,
+        plz: data.plz || null,
+        stadt: data.stadt || null,
+        notizen: data.notizen || null,
+      }).eq('id', editingContact.id)
+      if (!error) {
+        setContacts(prev => prev.map(c => c.id === editingContact.id
+          ? { ...c, ...data }
+          : c).sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname)))
+        const updatedContact = { ...editingContact, ...data }
+        setSelectedContact(updatedContact)
+      }
+    } else {
+      const updated = contacts.map(c => c.id === editingContact.id ? { ...c, ...data } : c)
+        .sort((a, b) => (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+      setContacts(updated)
+      saveLocalContacts(updated)
+      const updatedContact = updated.find(c => c.id === editingContact.id)
+      if (updatedContact) setSelectedContact(updatedContact)
+    }
     setModalOpen(false)
     showFeedback('Änderungen gespeichert')
   }
 
-  function handleDeleteContact() {
+  async function handleDeleteContact() {
     if (!selectedContact) return
+    if (useDB && orgId) {
+      await supabase.from('tenants').delete().eq('id', selectedContact.id)
+    }
     const updated = contacts.filter(c => c.id !== selectedContact.id)
     setContacts(updated)
-    saveContacts(updated)
+    if (!useDB) saveLocalContacts(updated)
     setSelectedContact(null)
     showFeedback('Kontakt gelöscht')
   }
@@ -397,26 +483,12 @@ export default function KontaktePage() {
   function handleCSVExport() {
     const headers = ['Vorname', 'Nachname', 'Telefon', 'E-Mail', 'Straße', 'Hausnummer', 'PLZ', 'Stadt', 'Notizen']
     const rows = contacts.map(c => [
-      c.vorname,
-      c.nachname,
-      c.telefon,
-      c.email,
-      c.strasse,
-      c.hausnummer,
-      c.plz,
-      c.stadt,
-      c.notizen,
+      c.vorname, c.nachname, c.telefon, c.email, c.strasse, c.hausnummer, c.plz, c.stadt, c.notizen,
     ])
-
-    // Escape and format CSV
     const csvContent = [
       headers.map(h => `"${h}"`).join(','),
-      ...rows.map(row =>
-        row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
-      ),
+      ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
-
-    // Download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
@@ -429,12 +501,14 @@ export default function KontaktePage() {
     showFeedback('Kontakte exportiert')
   }
 
-  function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  function processCSVFile(file: File) {
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      showFeedback('Bitte nur CSV-Dateien hochladen')
+      return
+    }
 
     const reader = new FileReader()
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const csv = event.target?.result as string
         const lines = csv.split('\n').filter(line => line.trim())
@@ -444,7 +518,6 @@ export default function KontaktePage() {
           return
         }
 
-        // Parse CSV (simple parser, handles basic cases)
         const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
         const vorNameIndex = headers.findIndex(h => h.includes('vorname'))
         const nachNameIndex = headers.findIndex(h => h.includes('nachname'))
@@ -461,12 +534,10 @@ export default function KontaktePage() {
 
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''))
-
           if (!values[vorNameIndex]?.trim() || !values[nachNameIndex]?.trim()) {
             errorCount++
             continue
           }
-
           newContacts.push({
             id: generateId(),
             vorname: values[vorNameIndex] || '',
@@ -483,10 +554,26 @@ export default function KontaktePage() {
         }
 
         if (newContacts.length > 0) {
-          const updated = [...contacts, ...newContacts].sort((a, b) =>
-            (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
-          setContacts(updated)
-          saveContacts(updated)
+          if (useDB && orgId) {
+            const rows = newContacts.map(c => ({
+              organization_id: orgId,
+              name: `${c.vorname} ${c.nachname}`.trim(),
+              telefon: c.telefon || null,
+              email: c.email || null,
+              strasse: c.strasse || null,
+              hausnummer: c.hausnummer || null,
+              plz: c.plz || null,
+              stadt: c.stadt || null,
+              notizen: c.notizen || null,
+            }))
+            await supabase.from('tenants').insert(rows)
+            await loadFromSupabase()
+          } else {
+            const updated = [...contacts, ...newContacts].sort((a, b) =>
+              (a.nachname + a.vorname).localeCompare(b.nachname + b.vorname))
+            setContacts(updated)
+            saveLocalContacts(updated)
+          }
           showFeedback(`${newContacts.length} Kontakte importiert` + (errorCount > 0 ? ` (${errorCount} übersprungen)` : ''))
         } else {
           showFeedback('Keine gültigen Kontakte zum Importieren gefunden')
@@ -497,8 +584,41 @@ export default function KontaktePage() {
       }
     }
     reader.readAsText(file)
-    // Reset input so same file can be imported again
+  }
+
+  function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    processCSVFile(file)
     e.target.value = ''
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) setIsDragging(false)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounter.current = 0
+    const file = e.dataTransfer.files?.[0]
+    if (file) processCSVFile(file)
   }
 
   const filteredContacts = contacts.filter(c => {
@@ -509,7 +629,24 @@ export default function KontaktePage() {
   })
 
   return (
-    <div className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'mr-96' : ''}`}>
+    <div
+      className={`max-w-6xl mx-auto transition-all ${selectedContact ? 'lg:mr-96' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 bg-blue-600/20 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-2xl shadow-2xl p-10 text-center border-2 border-dashed border-blue-500">
+            <FileUp className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+            <p className="text-lg font-semibold text-slate-800">CSV-Datei hier ablegen</p>
+            <p className="text-sm text-slate-500 mt-1">Kontakte werden automatisch importiert</p>
+          </div>
+        </div>
+      )}
+
       {savedFeedback && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg shadow-lg text-sm font-medium">
           <Check className="w-4 h-4" />
@@ -523,7 +660,7 @@ export default function KontaktePage() {
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
-        <div className="flex-1 relative min-w-64">
+        <div className="flex-1 relative min-w-0 w-full sm:min-w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input type="text" placeholder="Nach Name, Telefon oder E-Mail suchen..."
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -543,12 +680,7 @@ export default function KontaktePage() {
           <label className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
             <Upload className="w-4 h-4" />
             CSV importieren
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleCSVImport}
-              className="hidden"
-            />
+            <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" />
           </label>
         </div>
       </div>
@@ -571,7 +703,8 @@ export default function KontaktePage() {
           </div>
         ) : (
           <>
-            <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 grid grid-cols-12 gap-4">
+            {/* Desktop table header */}
+            <div className="hidden lg:grid px-6 py-3 bg-slate-50 border-b border-slate-100 grid-cols-12 gap-4">
               <p className="col-span-4 text-xs font-semibold text-slate-400 uppercase tracking-wide">Name</p>
               <p className="col-span-2 text-xs font-semibold text-slate-400 uppercase tracking-wide">Telefon</p>
               <p className="col-span-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">E-Mail</p>
@@ -582,28 +715,29 @@ export default function KontaktePage() {
               {filteredContacts.map(contact => (
                 <div key={contact.id}
                   onClick={() => setSelectedContact(selectedContact?.id === contact.id ? null : contact)}
-                  className={`px-6 py-4 grid grid-cols-12 gap-4 items-center cursor-pointer transition-colors ${
+                  className={`px-4 py-3 lg:px-6 lg:py-4 flex items-center gap-3 lg:grid lg:grid-cols-12 lg:gap-4 cursor-pointer transition-colors ${
                     selectedContact?.id === contact.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50'
                   }`}>
-                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                  <div className="lg:col-span-4 flex items-center gap-3 min-w-0 flex-1">
                     <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(contact.id)} flex items-center justify-center flex-shrink-0`}>
                       <span className="text-white text-xs font-bold">{getInitials(contact.vorname, contact.nachname)}</span>
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{contact.nachname}, {contact.vorname}</p>
-                      {contact.notizen && <p className="text-xs text-slate-400 truncate">{contact.notizen}</p>}
+                      <p className="text-xs text-slate-400 truncate lg:hidden">{contact.telefon || contact.email || ''}</p>
+                      {contact.notizen && <p className="text-xs text-slate-400 truncate hidden lg:block">{contact.notizen}</p>}
                     </div>
                   </div>
-                  <div className="col-span-2 min-w-0">
+                  <div className="hidden lg:block lg:col-span-2 min-w-0">
                     {contact.telefon ? <p className="text-sm text-slate-700 font-mono truncate">{contact.telefon}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-                  <div className="col-span-3 min-w-0">
+                  <div className="hidden lg:block lg:col-span-3 min-w-0">
                     {contact.email ? <p className="text-sm text-slate-600 truncate">{contact.email}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-                  <div className="col-span-2 min-w-0">
+                  <div className="hidden lg:block lg:col-span-2 min-w-0">
                     {contact.stadt ? <p className="text-sm text-slate-600 truncate">{contact.stadt}</p> : <p className="text-xs text-slate-300">—</p>}
                   </div>
-                  <div className="col-span-1 flex justify-end" onClick={e => e.stopPropagation()}>
+                  <div className="lg:col-span-1 flex justify-end flex-shrink-0" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => { setSelectedContact(contact); setEditingContact(contact); setModalMode('edit'); setModalOpen(true) }}
                       className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-600" title="Bearbeiten">

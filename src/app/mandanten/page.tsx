@@ -1,30 +1,8 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Building2, Phone, User, Ticket } from 'lucide-react'
-
-async function getMandanten() {
-  const { data: tenants, error } = await supabase
-    .from('tenants')
-    .select('*')
-    .order('name', { ascending: true })
-
-  if (error) console.error(error)
-  return (tenants ?? []) as Record<string, unknown>[]
-}
-
-async function getTicketCountPerTenant(): Promise<Record<string, number>> {
-  const { data } = await supabase
-    .from('tickets')
-    .select('mieter_id')
-    .not('mieter_id', 'is', null)
-
-  if (!data) return {}
-  const counts: Record<string, number> = {}
-  for (const row of data) {
-    const id = row.mieter_id as string
-    counts[id] = (counts[id] ?? 0) + 1
-  }
-  return counts
-}
+import { Building2, Phone, Ticket } from 'lucide-react'
 
 function getInitials(name: string) {
   return name
@@ -44,8 +22,38 @@ const AVATAR_COLORS = [
   'from-cyan-400 to-cyan-600',
 ]
 
-export default async function MandantenPage() {
-  const [mandanten, ticketCounts] = await Promise.all([getMandanten(), getTicketCountPerTenant()])
+export default function MandantenPage() {
+  const [mandanten, setMandanten] = useState<Record<string, unknown>[]>([])
+  const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const [tenantsRes, ticketsRes] = await Promise.all([
+        supabase.from('tenants').select('*').order('name', { ascending: true }),
+        supabase.from('tickets').select('mieter_id').not('mieter_id', 'is', null),
+      ])
+
+      setMandanten((tenantsRes.data ?? []) as Record<string, unknown>[])
+
+      const counts: Record<string, number> = {}
+      for (const row of (ticketsRes.data ?? [])) {
+        const id = (row as Record<string, unknown>).mieter_id as string
+        counts[id] = (counts[id] ?? 0) + 1
+      }
+      setTicketCounts(counts)
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[40vh]">
+        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -54,7 +62,6 @@ export default async function MandantenPage() {
         <p className="text-slate-500 text-sm mt-1">Mieter und Ansprechpartner</p>
       </div>
 
-      {/* Summary */}
       <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-8 flex items-center gap-4">
         <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
           <Building2 className="w-6 h-6 text-blue-600" />
@@ -65,12 +72,10 @@ export default async function MandantenPage() {
         </div>
       </div>
 
-      {/* Grid */}
       {mandanten.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <Building2 className="w-10 h-10 text-slate-200 mx-auto mb-3" />
           <p className="text-slate-400 text-sm">Noch keine Mandanten erfasst</p>
-          <p className="text-slate-300 text-xs mt-1">Mandanten werden über die Supabase-Tabelle hinzugefügt</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -81,15 +86,9 @@ export default async function MandantenPage() {
             const ticketCount = ticketCounts[m.id as string] ?? 0
 
             return (
-              <div
-                key={m.id as string}
-                className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow"
-              >
-                {/* Avatar + name */}
+              <div key={m.id as string} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className={`w-11 h-11 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}
-                  >
+                  <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
                     <span className="text-white text-sm font-bold">{initials}</span>
                   </div>
                   <div className="min-w-0">
@@ -97,8 +96,6 @@ export default async function MandantenPage() {
                     <p className="text-xs text-slate-400">Mieter</p>
                   </div>
                 </div>
-
-                {/* Details */}
                 <div className="space-y-2">
                   {m.phone_number ? (
                     <div className="flex items-center gap-2">
@@ -111,15 +108,10 @@ export default async function MandantenPage() {
                       <span className="text-xs text-slate-300 italic">Keine Nummer</span>
                     </div>
                   )}
-
                   <div className="flex items-center gap-2">
                     <Ticket className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
                     <span className="text-xs text-slate-500">
-                      {ticketCount === 0
-                        ? 'Keine Tickets'
-                        : ticketCount === 1
-                        ? '1 Ticket'
-                        : `${ticketCount} Tickets`}
+                      {ticketCount === 0 ? 'Keine Tickets' : ticketCount === 1 ? '1 Ticket' : `${ticketCount} Tickets`}
                     </span>
                   </div>
                 </div>

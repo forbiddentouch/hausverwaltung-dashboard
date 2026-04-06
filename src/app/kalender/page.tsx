@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Phone, Plus, Pencil, Trash2, Check, Calendar, Download, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
+import { supabase, getOrganizationId } from '@/lib/supabase'
 
 interface Appointment {
   id: string
@@ -15,58 +16,26 @@ interface Appointment {
   createdAt: string
 }
 
-const SEED_APPOINTMENTS: Appointment[] = [
-  {
-    id: '1',
-    name: 'Klaus Müller',
-    telefon: '+49 30 123456',
-    datum: new Date().toISOString().split('T')[0],
-    uhrzeit: '15:30',
-    typ: 'Rückruf',
-    notizen: 'Frage wegen Nebenkostenabrechnung',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'Petra Wagner',
-    telefon: '+49 40 654321',
-    datum: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    uhrzeit: '10:00',
-    typ: 'Termin',
-    notizen: 'Mietvertrag besprechen',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    name: 'Robert Schneider',
-    telefon: '+49 69 789012',
-    datum: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-    uhrzeit: '14:15',
-    typ: 'Besichtigung',
-    notizen: 'Wohnung 3. OG, Interessent aus München',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    name: 'Maria Hofmann',
-    telefon: '+49 89 321654',
-    datum: new Date(Date.now() + 432000000).toISOString().split('T')[0],
-    uhrzeit: '09:00',
-    typ: 'Termin',
-    notizen: 'Übergabe der neuen Wohnung',
-    erledigt: false,
-    createdAt: new Date().toISOString(),
-  },
-]
 
 const TYP_CONFIG: Record<string, { color: string; bg: string; border: string; emoji: string }> = {
   'Rückruf':      { color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200',   emoji: '📞' },
   'Termin':       { color: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200', emoji: '📅' },
   'Besichtigung': { color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200',  emoji: '🏠' },
   'Notfall':      { color: 'text-red-700',    bg: 'bg-red-50',    border: 'border-red-200',    emoji: '🚨' },
+}
+
+function dbRowToAppointment(row: Record<string, unknown>): Appointment {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    telefon: (row.telefon as string) || '',
+    datum: row.datum as string,
+    uhrzeit: (row.uhrzeit as string)?.slice(0, 5) || '',
+    typ: (row.typ as Appointment['typ']) || 'Termin',
+    notizen: (row.notizen as string) || '',
+    erledigt: row.erledigt as boolean,
+    createdAt: (row.created_at as string) || new Date().toISOString(),
+  }
 }
 
 function buildGoogleCalendarUrl(appointment: Appointment): string {
@@ -148,18 +117,42 @@ export default function KalenderPage() {
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [formData, setFormData] = useState<Partial<Appointment>>({ name:'', telefon:'', datum:'', uhrzeit:'', typ:'Termin', notizen:'' })
+  const [useDB, setUseDB] = useState(false)
+  const [orgId, setOrgId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const stored = localStorage.getItem('immogreta_kalender')
-    if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments(SEED_APPOINTMENTS) } }
-    else setAppointments(SEED_APPOINTMENTS)
+  const loadFromSupabase = useCallback(async () => {
+    try {
+      const oid = await getOrganizationId()
+      if (!oid) {
+        const stored = localStorage.getItem('immogreta_kalender')
+        if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments([]) } }
+        else setAppointments([])
+        hasLoaded.current = true
+        return
+      }
+      setOrgId(oid)
+      setUseDB(true)
+      const { data, error } = await supabase
+        .from('kalender')
+        .select('*')
+        .eq('organization_id', oid)
+        .order('datum')
+      if (error) throw error
+      setAppointments((data || []).map(dbRowToAppointment))
+    } catch {
+      const stored = localStorage.getItem('immogreta_kalender')
+      if (stored) { try { setAppointments(JSON.parse(stored)) } catch { setAppointments([]) } }
+      else setAppointments([])
+    }
     hasLoaded.current = true
   }, [])
 
+  useEffect(() => { loadFromSupabase() }, [loadFromSupabase])
+
   useEffect(() => {
-    if (!hasLoaded.current) return
+    if (!hasLoaded.current || useDB) return
     localStorage.setItem('immogreta_kalender', JSON.stringify(appointments))
-  }, [appointments])
+  }, [appointments, useDB])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3500) }
   const handleOpenModal = (a?: Appointment) => {
@@ -168,19 +161,61 @@ export default function KalenderPage() {
     setIsModalOpen(true)
   }
   const handleCloseModal = () => { setIsModalOpen(false); setEditingId(null) }
-  const handleSave = () => {
+
+  const handleSave = async () => {
     if (!formData.name || !formData.datum || !formData.uhrzeit) { showToast('Bitte alle Pflichtfelder ausfüllen'); return }
     if (editingId) {
+      if (useDB && orgId) {
+        await supabase.from('kalender').update({
+          name: formData.name,
+          telefon: formData.telefon || null,
+          datum: formData.datum,
+          uhrzeit: formData.uhrzeit,
+          typ: formData.typ || 'Termin',
+          notizen: formData.notizen || null,
+        }).eq('id', editingId)
+      }
       setAppointments(prev => prev.map(a => a.id === editingId ? { ...a, ...formData } : a))
       showToast('Termin aktualisiert')
     } else {
-      setAppointments(prev => [...prev, { ...(formData as Appointment), id: Date.now().toString(), erledigt: false, createdAt: new Date().toISOString() }])
+      if (useDB && orgId) {
+        const { data: inserted, error } = await supabase.from('kalender').insert({
+          organization_id: orgId,
+          name: formData.name,
+          telefon: formData.telefon || null,
+          datum: formData.datum,
+          uhrzeit: formData.uhrzeit,
+          typ: formData.typ || 'Termin',
+          notizen: formData.notizen || null,
+        }).select().single()
+        if (!error && inserted) {
+          setAppointments(prev => [...prev, dbRowToAppointment(inserted)])
+        }
+      } else {
+        setAppointments(prev => [...prev, { ...(formData as Appointment), id: Date.now().toString(), erledigt: false, createdAt: new Date().toISOString() }])
+      }
       showToast('Termin hinzugefügt')
     }
     handleCloseModal()
   }
-  const handleDelete = (id: string) => { setAppointments(prev => prev.filter(a => a.id !== id)); setDeleteConfirm(null); showToast('Termin gelöscht') }
-  const handleToggle = (id: string) => setAppointments(prev => prev.map(a => a.id === id ? { ...a, erledigt: !a.erledigt } : a))
+
+  const handleDelete = async (id: string) => {
+    if (useDB && orgId) {
+      await supabase.from('kalender').delete().eq('id', id)
+    }
+    setAppointments(prev => prev.filter(a => a.id !== id))
+    setDeleteConfirm(null)
+    showToast('Termin gelöscht')
+  }
+
+  const handleToggle = async (id: string) => {
+    const appt = appointments.find(a => a.id === id)
+    if (!appt) return
+    if (useDB && orgId) {
+      await supabase.from('kalender').update({ erledigt: !appt.erledigt }).eq('id', id)
+    }
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, erledigt: !a.erledigt } : a))
+  }
 
   const formatDate = (ds: string) => new Date(ds + 'T00:00:00').toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit' })
   const isToday = (ds: string) => ds === new Date().toISOString().split('T')[0]
