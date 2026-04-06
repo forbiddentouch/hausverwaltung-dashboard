@@ -81,31 +81,38 @@ export default function DashboardPage() {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
-      const [callsToday, openTickets, totalCalls, forwardedCalls, recentCalls, recentTickets, ticketsHoch, ticketsMittel, ticketsNiedrig] = await Promise.all([
-        supabase.from('calls').select('id', { count: 'exact', head: true }).gte('started_at', today.toISOString()),
-        supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen'),
-        supabase.from('calls').select('id', { count: 'exact', head: true }),
-        supabase.from('calls').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
-        supabase.from('calls').select('*').order('started_at', { ascending: false }).limit(5),
-        supabase.from('tickets').select('*').order('erstellt_am', { ascending: false }).limit(5),
-        supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'hoch'),
-        supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'mittel'),
-        supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'niedrig'),
-      ])
+      try {
+        const [callsToday, openTickets, totalCalls, forwardedCalls, recentCalls, recentTickets, ticketsHoch, ticketsMittel, ticketsNiedrig] = await Promise.all([
+          supabase.from('calls').select('id', { count: 'exact', head: true }).gte('started_at', today.toISOString()),
+          supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen'),
+          supabase.from('calls').select('id', { count: 'exact', head: true }),
+          supabase.from('calls').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+          supabase.from('calls').select('*').order('started_at', { ascending: false }).limit(5),
+          supabase.from('tickets').select('*').order('erstellt_am', { ascending: false }).limit(5),
+          supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'hoch'),
+          supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'mittel'),
+          supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'niedrig'),
+        ])
 
-      setStats({
-        callsToday: callsToday.count ?? 0,
-        openTickets: openTickets.count ?? 0,
-        totalCalls: totalCalls.count ?? 0,
-        forwardedCalls: forwardedCalls.count ?? 0,
-        recentCalls: (recentCalls.data ?? []) as Record<string, unknown>[],
-        recentTickets: (recentTickets.data ?? []) as Record<string, unknown>[],
-        ticketsByPrio: {
-          dringend: ticketsHoch.count ?? 0,
-          alltaeglich: ticketsMittel.count ?? 0,
-          beiGelegenheit: ticketsNiedrig.count ?? 0,
-        },
-      })
+        if (recentCalls.error) console.error('Calls error:', recentCalls.error)
+        if (recentTickets.error) console.error('Tickets error:', recentTickets.error)
+
+        setStats({
+          callsToday: callsToday.count ?? 0,
+          openTickets: openTickets.count ?? 0,
+          totalCalls: totalCalls.count ?? 0,
+          forwardedCalls: forwardedCalls.count ?? 0,
+          recentCalls: (recentCalls.data ?? []) as Record<string, unknown>[],
+          recentTickets: (recentTickets.data ?? []) as Record<string, unknown>[],
+          ticketsByPrio: {
+            dringend: ticketsHoch.count ?? 0,
+            alltaeglich: ticketsMittel.count ?? 0,
+            beiGelegenheit: ticketsNiedrig.count ?? 0,
+          },
+        })
+      } catch (err) {
+        console.error('Dashboard load error:', err)
+      }
       setLoading(false)
     }
     loadStats()
