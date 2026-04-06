@@ -19,6 +19,9 @@ import {
   AlertTriangle,
   UserCheck,
   Users,
+  FileText,
+  ChevronUp,
+  Copy,
 } from 'lucide-react'
 
 type Call = {
@@ -176,6 +179,122 @@ const tabs = [
   { key: 'completed', label: 'Erledigt' },
   { key: 'archived', label: 'Archiviert' },
 ]
+
+// ── Transcript component ────────────────────────────────────────────────────
+function TranscriptSection({
+  transcript,
+  callId,
+  callerNumber,
+}: {
+  transcript: string | null
+  callId: string
+  callerNumber: string | null
+}) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  if (!transcript) {
+    return (
+      <div>
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          Gesprächsprotokoll
+        </p>
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 text-center">
+          <FileText className="w-6 h-6 text-slate-300 mx-auto mb-2" />
+          <p className="text-xs text-slate-400">Kein Transkript verfügbar</p>
+        </div>
+      </div>
+    )
+  }
+
+  function copyTranscript() {
+    navigator.clipboard.writeText(transcript!)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Parse transcript lines: "Agent: ..." / "Caller: ..."
+  const lines = transcript.split('\n').filter(l => l.trim())
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          Gesprächsprotokoll
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyTranscript}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Kopiert' : 'Kopieren'}
+          </button>
+          <button
+            onClick={() => setOpen(!open)}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+          >
+            {open ? (
+              <><ChevronUp className="w-3.5 h-3.5" /> Einklappen</>
+            ) : (
+              <><ChevronDown className="w-3.5 h-3.5" /> Volltext anzeigen</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Preview or full transcript */}
+      <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden">
+        {!open ? (
+          // Short preview: first 3 lines
+          <div className="p-3 space-y-2">
+            {lines.slice(0, 3).map((line, i) => {
+              const isAgent = line.toLowerCase().startsWith('agent') || line.toLowerCase().startsWith('greta') || line.toLowerCase().startsWith('ki')
+              return (
+                <div key={i} className={`flex gap-2 ${isAgent ? '' : 'flex-row-reverse'}`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold ${isAgent ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
+                    {isAgent ? 'G' : 'A'}
+                  </div>
+                  <div className={`text-xs rounded-lg px-3 py-2 max-w-[80%] ${isAgent ? 'bg-blue-50 text-blue-900' : 'bg-white text-slate-700 border border-slate-200'}`}>
+                    {line.replace(/^(Agent|Greta|KI|Caller|Anrufer|Kunde):\s*/i, '')}
+                  </div>
+                </div>
+              )
+            })}
+            {lines.length > 3 && (
+              <p className="text-xs text-slate-400 text-center pt-1">+ {lines.length - 3} weitere Nachrichten</p>
+            )}
+          </div>
+        ) : (
+          // Full conversation
+          <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
+            {lines.map((line, i) => {
+              const isAgent = line.toLowerCase().startsWith('agent') || line.toLowerCase().startsWith('greta') || line.toLowerCase().startsWith('ki')
+              return (
+                <div key={i} className={`flex gap-2 ${isAgent ? '' : 'flex-row-reverse'}`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold ${isAgent ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
+                    {isAgent ? 'G' : 'A'}
+                  </div>
+                  <div className={`text-xs rounded-lg px-3 py-2 max-w-[80%] leading-relaxed ${isAgent ? 'bg-blue-50 text-blue-900' : 'bg-white text-slate-700 border border-slate-200'}`}>
+                    {line.replace(/^(Agent|Greta|KI|Caller|Anrufer|Kunde):\s*/i, '')}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Raw text toggle (for unformatted transcripts) */}
+      {lines.length <= 1 && transcript.length > 0 && (
+        <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+          {transcript}
+        </div>
+      )}
+    </div>
+  )
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 export default function AnrufePage() {
   const [calls, setCalls] = useState<Call[]>([])
@@ -524,6 +643,9 @@ export default function AnrufePage() {
                 ))}
               </div>
             </div>
+
+            {/* Transcript section */}
+            <TranscriptSection transcript={selectedCall.transcript} callId={selectedCall.id} callerNumber={selectedCall.caller_number} />
           </div>
         </div>
       )}
