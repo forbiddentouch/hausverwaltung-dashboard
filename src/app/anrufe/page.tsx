@@ -22,20 +22,22 @@ type Call = {
   id: string
   caller_number: string | null
   caller_name: string | null
-  status: 'new' | 'in_progress' | 'done'
+  status: 'new' | 'in_progress' | 'done' | 'completed'
   started_at: string
-  duration: number
+  duration: number | null
+  duration_sec: number | null
   task: string
   task_icon: string
   task_color: string
   summary: string | null
   mood: string
   transcript: string | null
+  detected_intention: string | null
 }
 
 
 function formatDuration(sec: number | null) {
-  if (!sec) return '—'
+  if (!sec) return 'â'
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return m > 0 ? `${m}m ${s}s` : `${s}s`
@@ -80,11 +82,11 @@ function TranscriptSection({
     return (
       <div>
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-          Gesprächsprotokoll
+          GesprÃ¤chsprotokoll
         </p>
         <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 text-center">
           <FileText className="w-6 h-6 text-slate-300 mx-auto mb-2" />
-          <p className="text-xs text-slate-400">Kein Transkript verfügbar</p>
+          <p className="text-xs text-slate-400">Kein Transkript verfÃ¼gbar</p>
         </div>
       </div>
     )
@@ -102,7 +104,7 @@ function TranscriptSection({
     <div>
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Gesprächsprotokoll
+          GesprÃ¤chsprotokoll
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -193,7 +195,17 @@ export default function AnrufePage() {
           .order('started_at', { ascending: false })
           .limit(100)
 
-        setCalls((data ?? []) as any[])
+        // Daten normalisieren: Backend-Felder auf Dashboard-Felder mappen
+        const normalized = (data ?? []).map((c: any) => ({
+          ...c,
+          duration: c.duration ?? c.duration_sec ?? null,
+          task: c.task || c.detected_intention || 'Allgemeine Anfrage',
+          task_icon: c.task_icon || (c.detected_intention === 'heizung_kaputt' ? 'ð¥' : c.detected_intention === 'wasserschaden' ? 'ð§' : 'ð'),
+          task_color: c.task_color || (c.detected_intention === 'heizung_kaputt' ? 'red' : c.detected_intention === 'wasserschaden' ? 'blue' : 'blue'),
+          mood: c.mood || 'â',
+          caller_name: c.caller_name || null,
+        }))
+        setCalls(normalized as any[])
       } catch (error) {
         console.error('Error loading calls:', error)
       } finally {
@@ -203,12 +215,19 @@ export default function AnrufePage() {
     load()
   }, [])
 
+  // Helper: duration kann als 'duration' oder 'duration_sec' aus der DB kommen
+  const getDuration = (c: Call) => c.duration ?? c.duration_sec ?? 0
+
+  // Helper: Status normalisieren ('completed' aus Backend = 'done' im Dashboard)
+  const normalizeStatus = (s: string) => s === 'completed' ? 'done' : s
+
   const filtered = calls.filter(c => {
+    const status = normalizeStatus(c.status)
     let matchTab = true
     if (activeTab !== 'all') {
-      if (activeTab === 'new') matchTab = c.status === 'new'
-      else if (activeTab === 'in_progress') matchTab = c.status === 'in_progress'
-      else if (activeTab === 'done') matchTab = c.status === 'done'
+      if (activeTab === 'new') matchTab = status === 'new'
+      else if (activeTab === 'in_progress') matchTab = status === 'in_progress'
+      else if (activeTab === 'done') matchTab = status === 'done'
       else if (activeTab === 'archived') matchTab = false
     }
 
@@ -216,9 +235,10 @@ export default function AnrufePage() {
       !search ||
       (c.caller_number ?? '').includes(search) ||
       (c.caller_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (c.summary ?? '').toLowerCase().includes(search.toLowerCase())
+      (c.summary ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.detected_intention ?? '').toLowerCase().includes(search.toLowerCase())
 
-    const matchDuration = !showShortCalls || (c.duration ?? 0) >= 30
+    const matchDuration = !showShortCalls || getDuration(c) >= 30
 
     return matchTab && matchSearch && matchDuration
   })
@@ -229,7 +249,7 @@ export default function AnrufePage() {
       <div className="px-8 py-6 border-b border-slate-200">
         <h1 className="text-3xl font-bold text-slate-900">Anrufe</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Verwalten Sie die Anrufe, die ImmoGreta für Sie getätigt hat.
+          Verwalten Sie die Anrufe, die ImmoGreta fÃ¼r Sie getÃ¤tigt hat.
         </p>
       </div>
 
@@ -252,7 +272,7 @@ export default function AnrufePage() {
 
       {/* Filter row */}
       <div className="px-8 py-4 border-b border-slate-200 flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-64 max-w-xs">
+        <div className="relative flex-1 min-w-64 maw-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
           <input
             value={search}
@@ -284,22 +304,22 @@ export default function AnrufePage() {
         </button>
 
         <button className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-          <Filter className="w-4 h-4" />+ Filter hinzufügen
+          <Filter className="w-4 h-4" />+ Filter hinzufÃ¼gen
         </button>
       </div>
 
       {/* Table */}
       <div className="px-8 py-6">
         {loading ? (
-          <div className="text-center py-12 text-slate-400">Lädt...</div>
+          <div className="text-center py-12 text-slate-400">LÃ¤dt...</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <Phone className="w-12 h-12 text-slate-200 mx-auto mb-4" />
             <p className="text-slate-600 text-sm font-medium">
-              {calls.length === 0 ? 'Noch keine Anrufe' : 'Keine Anrufe für diesen Filter'}
+              {calls.length === 0 ? 'Noch keine Anrufe' : 'Keine Anrufe fÃ¼r diesen Filter'}
             </p>
             {calls.length === 0 && (
-              <p className="text-slate-400 text-xs mt-2">Anrufe erscheinen hier automatisch, sobald ImmoGreta Gespräche führt.</p>
+              <p className="text-slate-400 text-xs mt-2">Anrufe erscheinen hier automatisch, sobald ImmoGreta GesprÃ¤che fÃ¼hrt.</p>
             )}
           </div>
         ) : (
@@ -336,17 +356,17 @@ export default function AnrufePage() {
                           {call.caller_number}
                         </p>
                         <p className="text-xs text-slate-400 lg:hidden">
-                          {formatDuration(call.duration)} · {formatDate(call.started_at)}
+                          {formatDuration(getDuration(call))} Â· {formatDate(call.started_at)}
                         </p>
                       </div>
                       <div className={`px-2.5 py-1 rounded-full text-xs font-medium lg:hidden ${
-                        call.status === 'new'
+                        normalizeStatus(call.status) === 'new'
                           ? 'bg-blue-100 text-blue-700'
-                          : call.status === 'in_progress'
+                          : normalizeStatus(call.status) === 'in_progress'
                           ? 'bg-amber-100 text-amber-700'
                           : 'bg-green-100 text-green-700'
                       }`}>
-                        {call.status === 'new' ? 'Neu' : call.status === 'in_progress' ? 'In Bearb.' : 'Erledigt'}
+                        {normalizeStatus(call.status) === 'new' ? 'Neu' : normalizeStatus(call.status) === 'in_progress' ? 'In Bearb.' : 'Erledigt'}
                       </div>
                     </div>
 
@@ -362,7 +382,7 @@ export default function AnrufePage() {
 
                     {/* Dauer - desktop only */}
                     <div className="hidden lg:block text-sm text-slate-600 font-medium">
-                      {formatDuration(call.duration)}
+                      {formatDuration(getDuration(call))}
                     </div>
 
                     {/* Datum - desktop only */}
@@ -373,13 +393,13 @@ export default function AnrufePage() {
                     {/* Status - desktop only */}
                     <div className="hidden lg:flex items-center gap-2">
                       <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        call.status === 'new'
+                        normalizeStatus(call.status) === 'new'
                           ? 'bg-blue-100 text-blue-700'
-                          : call.status === 'in_progress'
+                          : normalizeStatus(call.status) === 'in_progress'
                           ? 'bg-amber-100 text-amber-700'
                           : 'bg-green-100 text-green-700'
                       }`}>
-                        {call.status === 'new' ? 'Neu' : call.status === 'in_progress' ? 'In Bearbeitung' : 'Erledigt'}
+                        {normalizeStatus(call.status) === 'new' ? 'Neu' : normalizeStatus(call.status) === 'in_progress' ? 'In Bearbeitung' : 'Erledigt'}
                       </div>
                     </div>
                   </div>
@@ -418,7 +438,7 @@ export default function AnrufePage() {
             {/* Duration and mood pills */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-700">
-                {formatDuration(selectedCall.duration)}
+                {formatDuration(selectedCall.duration ?? selectedCall.duration_sec ?? 0)}
               </div>
               <div className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-700">
                 {selectedCall.mood}
@@ -449,10 +469,10 @@ export default function AnrufePage() {
               </div>
             </div>
 
-            {/* Ausgeführte Aufgabe section */}
+            {/* AusgefÃ¼hrte Aufgabe section */}
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                Ausgeführte Aufgabe
+                AusgefÃ¼hrte Aufgabe
               </p>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
