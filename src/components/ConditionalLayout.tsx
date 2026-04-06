@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import FloatingGreta from './FloatingGreta'
+import BrandStyle from './BrandStyle'
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -15,6 +16,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex h-full">
+      <BrandStyle />
       <Sidebar />
       <main className="ml-56 flex-1 min-h-full p-8 bg-slate-50">
         {children}

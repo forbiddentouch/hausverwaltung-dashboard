@@ -69,7 +69,10 @@ export default function EinstellungenPage() {
   function handleColorChange(color: string) {
     setSelectedColor(color)
     localStorage.setItem('immogreta_brand_color', color)
-    showFeedback('Markenfarbe gespeichert')
+    // Update CSS variable immediately so sidebar reflects change without reload
+    document.documentElement.style.setProperty('--brand', color)
+    window.dispatchEvent(new Event('immogreta_brand_updated'))
+    showFeedback('Markenfarbe gespeichert ✓')
   }
 
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {

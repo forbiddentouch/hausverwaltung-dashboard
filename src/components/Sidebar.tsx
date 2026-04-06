@@ -2,53 +2,68 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { signOut } from '@/lib/auth'
 import {
-  ChevronRight,
-  Phone,
-  Users,
-  UserCheck,
-  Calendar,
-  Settings,
-  ListTodo,
-  Palette,
-  Copy,
-  LogOut,
+  ChevronRight, Phone, Users, UserCheck, Calendar,
+  Settings, ListTodo, Palette, Copy, LogOut,
 } from 'lucide-react'
 
 const menuItems = [
-  { href: '/anrufe', label: 'Anrufe', icon: Phone },
-  { href: '/kontakte', label: 'Kontakte', icon: Users },
-  { href: '/mitarbeiter', label: 'Mitarbeiter', icon: UserCheck },
-  { href: '/kalender', label: 'Kalender', icon: Calendar, badge: 'Neu' },
+  { href: '/anrufe',      label: 'Anrufe',      icon: Phone },
+  { href: '/kontakte',    label: 'Kontakte',     icon: Users },
+  { href: '/mitarbeiter', label: 'Mitarbeiter',  icon: UserCheck },
+  { href: '/kalender',    label: 'Kalender',     icon: Calendar, badge: 'Neu' },
 ]
 
 const optionItems = [
   { href: '/einstellungen', label: 'Einstellungen', icon: Settings },
-  { href: '/aufgaben', label: 'Aufgaben', icon: ListTodo },
-  { href: '/stil', label: 'Stil', icon: Palette },
+  { href: '/aufgaben',      label: 'Aufgaben',       icon: ListTodo },
+  { href: '/stil',          label: 'Stil',           icon: Palette },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [brand, setBrand] = useState('#2563eb')
 
-  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
+  useEffect(() => {
+    const load = () => setBrand(localStorage.getItem('immogreta_brand_color') || '#2563eb')
+    load()
+    window.addEventListener('storage', load)
+    // Also listen for custom event dispatched by Einstellungen page
+    window.addEventListener('immogreta_brand_updated', load)
+    return () => {
+      window.removeEventListener('storage', load)
+      window.removeEventListener('immogreta_brand_updated', load)
+    }
+  }, [])
 
-  const NavLink = ({ href, label, icon: Icon, badge }: { href: string; label: string; icon: any; badge?: string }) => {
+  const isActive = (href: string) =>
+    pathname === href || (href !== '/' && pathname.startsWith(href))
+
+  const NavLink = ({
+    href, label, icon: Icon, badge,
+  }: { href: string; label: string; icon: React.ElementType; badge?: string }) => {
     const active = isActive(href)
     return (
       <Link
         href={href}
         className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-          active ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-gray-50'
+          active ? 'text-white' : 'text-slate-600 hover:bg-gray-50'
         }`}
+        style={active ? { backgroundColor: brand } : undefined}
       >
         <div className="flex items-center gap-3">
-          <Icon className={`w-4 h-4 ${active ? 'text-blue-600' : 'text-slate-400'}`} />
+          <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
           {label}
         </div>
         {badge && (
-          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded"
+            style={active
+              ? { backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' }
+              : { backgroundColor: `${brand}20`, color: brand }}
+          >
             {badge}
           </span>
         )}
@@ -58,20 +73,13 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-56 bg-white border-r border-slate-200 flex flex-col z-10">
-      {/* TOP: ImmoGreta branding with avatar */}
+      {/* Branding */}
       <div className="px-4 py-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
-            {/* Avatar image */}
             <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/greta-avatar.png"
-                alt="ImmoGreta"
-                width={36}
-                height={36}
-                className="w-full h-full object-cover object-top"
-              />
+              <img src="/greta-avatar.png" alt="ImmoGreta" width={36} height={36} className="w-full h-full object-cover object-top" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-slate-900 text-sm leading-tight">ImmoGreta</p>
@@ -84,7 +92,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* MENU section */}
+      {/* Menu */}
       <div className="flex-1 px-3 py-4 overflow-y-auto">
         <div className="mb-6">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-3">Menu</p>
@@ -94,8 +102,6 @@ export default function Sidebar() {
             ))}
           </div>
         </div>
-
-        {/* OPTIONEN section */}
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-3">Optionen</p>
           <div className="space-y-1">
@@ -106,9 +112,8 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* BOTTOM area */}
+      {/* Bottom */}
       <div className="px-3 py-4 border-t border-slate-200 space-y-4">
-        {/* Green card */}
         <div className="bg-green-50 rounded-xl px-3 py-3 border border-green-200">
           <div className="flex gap-3">
             <div className="flex-shrink-0 pt-0.5">
@@ -123,7 +128,6 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Phone number */}
         <div className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5">
           <span className="text-xs font-medium text-slate-700">+1 (662) 439-4944</span>
           <button className="p-1 hover:bg-slate-200 rounded transition-colors">
@@ -131,12 +135,10 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Help link */}
         <Link href="#" className="block text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors">
           Hilfe benötigt? →
         </Link>
 
-        {/* Logout */}
         <button
           onClick={() => signOut()}
           className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
