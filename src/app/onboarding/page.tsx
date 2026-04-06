@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
+const supabase = getSupabaseBrowserClient()
 import { Building2, ArrowRight, Loader2 } from 'lucide-react'
 
 export default function OnboardingPage() {

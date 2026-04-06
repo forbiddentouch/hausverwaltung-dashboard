@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
+const supabase = getSupabaseBrowserClient()
 import { Building2, Lock, Eye, EyeOff, Loader2, Check, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 

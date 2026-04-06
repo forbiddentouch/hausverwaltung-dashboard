@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
+const supabase = getSupabaseBrowserClient()
 import { Building2, Eye, EyeOff, Loader2, Lock, Mail, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
