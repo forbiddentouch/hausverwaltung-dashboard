@@ -9,7 +9,6 @@ import {
   X,
   Filter,
   Calendar,
-  Star,
   Mail,
   Check,
   Users,
@@ -199,7 +198,7 @@ export default function AnrufePage() {
         const normalized = (data ?? []).map((c: any) => ({
           ...c,
           duration: c.duration ?? c.duration_sec ?? null,
-          task: (c.task && c.task !== 'default') ? c.task : (c.detected_intention || 'Allgemeine Anfrage'),
+          task: (c.task && c.task !== 'default') ? c.task : (c.detected_intention && c.detected_intention !== 'default' ? c.detected_intention : 'Allgemeine Anfrage'),
           task_icon: c.detected_intention === 'heizung_kaputt' ? '🔥' : c.detected_intention === 'wasserschaden' ? '💧' : '📞',
           task_color: c.detected_intention === 'heizung_kaputt' ? 'red' : c.detected_intention === 'wasserschaden' ? 'blue' : 'blue',
           mood: c.mood || '—',
@@ -508,27 +507,6 @@ export default function AnrufePage() {
                   <Users className="w-4 h-4 text-slate-400" />
                   <span>Weitergeleitet an Mitarbeiter</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Feedback section */}
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                Feedback
-              </p>
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <button
-                    key={i}
-                    className="p-1 hover:bg-slate-100 rounded transition-colors"
-                  >
-                    <Star
-                      className={`w-5 h-5 ${
-                        i < 3 ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'
-                      }`}
-                    />
-                  </button>
-                ))}
               </div>
             </div>
 
