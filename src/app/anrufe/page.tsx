@@ -434,9 +434,13 @@ export default function AnrufePage() {
 
       {/* Right side detail panel */}
       {selectedCall && (
-        <div className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-scroll overflow-x-hidden overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {/* Header with close button */}
-          <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
+        <div className="fixed inset-0 z-50" onClick={() => setSelectedCall(null)}>
+          <div
+            className="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+          {/* Header with close button – not sticky, just at top of flex column */}
+          <div className="flex-none flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
             <h2 className="text-lg font-semibold text-slate-900">Details</h2>
             <button
               onClick={() => setSelectedCall(null)}
@@ -446,7 +450,7 @@ export default function AnrufePage() {
             </button>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6" style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* Title and date */}
             <div>
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
@@ -535,6 +539,7 @@ export default function AnrufePage() {
 
             {/* Transcript section */}
             <TranscriptSection transcript={selectedCall.transcript} />
+          </div>
           </div>
         </div>
       )}
