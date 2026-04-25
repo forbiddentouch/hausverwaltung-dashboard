@@ -199,9 +199,9 @@ export default function AnrufePage() {
         const normalized = (data ?? []).map((c: any) => ({
           ...c,
           duration: c.duration ?? c.duration_sec ?? null,
-          task: c.task || c.detected_intention || 'Allgemeine Anfrage',
-          task_icon: c.task_icon || (c.detected_intention === 'heizung_kaputt' ? '🔥' : c.detected_intention === 'wasserschaden' ? '💧' : '📞'),
-          task_color: c.task_color || (c.detected_intention === 'heizung_kaputt' ? 'red' : c.detected_intention === 'wasserschaden' ? 'blue' : 'blue'),
+          task: (c.task && c.task !== 'default') ? c.task : (c.detected_intention || 'Allgemeine Anfrage'),
+          task_icon: c.detected_intention === 'heizung_kaputt' ? '🔥' : c.detected_intention === 'wasserschaden' ? '💧' : '📞',
+          task_color: c.detected_intention === 'heizung_kaputt' ? 'red' : c.detected_intention === 'wasserschaden' ? 'blue' : 'blue',
           mood: c.mood || '—',
           caller_name: c.caller_name || null,
         }))
