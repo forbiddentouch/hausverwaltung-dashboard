@@ -185,8 +185,26 @@ export default function AnrufePage() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null)
 
   useEffect(() => {
-    document.body.style.overflow = selectedCall ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
+    if (selectedCall) {
+      const scrollY = window.scrollY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.overflowX = 'hidden'
+    } else {
+      const top = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowX = ''
+      window.scrollTo(0, parseInt(top || '0') * -1)
+    }
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflowX = ''
+    }
   }, [selectedCall])
 
   useEffect(() => {
@@ -416,7 +434,7 @@ export default function AnrufePage() {
 
       {/* Right side detail panel */}
       {selectedCall && (
-        <div className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-scroll overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-scroll overflow-x-hidden overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Header with close button */}
           <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
             <h2 className="text-lg font-semibold text-slate-900">Details</h2>
