@@ -185,6 +185,11 @@ export default function AnrufePage() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null)
 
   useEffect(() => {
+    document.body.style.overflow = selectedCall ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [selectedCall])
+
+  useEffect(() => {
     async function load() {
       setLoading(true)
       try {
@@ -411,7 +416,7 @@ export default function AnrufePage() {
 
       {/* Right side detail panel */}
       {selectedCall && (
-        <div className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-auto">
+        <div className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-white border-l border-slate-200 shadow-xl z-50 overflow-y-scroll overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Header with close button */}
           <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
             <h2 className="text-lg font-semibold text-slate-900">Details</h2>
