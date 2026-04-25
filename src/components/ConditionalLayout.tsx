@@ -54,10 +54,10 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
 
   if (authState === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-400">Laden...</p>
+          <div className="w-8 h-8 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-[#6E6E73]">Laden…</p>
         </div>
       </div>
     )
@@ -75,7 +75,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
     <div className="flex h-full">
       <BrandStyle />
       <Sidebar />
-      <main className="flex-1 min-h-full p-4 pt-16 bg-slate-50 lg:ml-56 lg:p-8 lg:pt-8">
+      <main className="flex-1 min-h-full p-4 pt-16 bg-[#F5F5F7] lg:ml-56 lg:p-8 lg:pt-8">
         {children}
       </main>
       <FloatingGreta />
