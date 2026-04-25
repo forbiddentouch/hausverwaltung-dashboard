@@ -32,13 +32,14 @@ function CallStatusDot({ status }: { status: string }) {
 }
 
 function PrioBadge({ prio }: { prio: string }) {
-  const map: Record<string, { cls: string; label: string }> = {
-    hoch:    { cls: 'bg-[#FF3B301A] text-[#FF3B30]', label: 'Dringend' },
-    mittel:  { cls: 'bg-[#FF95001A] text-[#FF9500]', label: 'Alltäglich' },
-    niedrig: { cls: 'bg-[#F2F2F7] text-[#6E6E73]',   label: 'Gelegenheit' },
+  const map: Record<string, string> = {
+    hoch: 'Dringend', mittel: 'Alltäglich', niedrig: 'Gelegenheit',
   }
-  const s = map[prio] ?? map.niedrig
-  return <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
+  return (
+    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#F2F2F7] text-[#6E6E73]">
+      {map[prio] ?? 'Offen'}
+    </span>
+  )
 }
 
 interface Stats {
@@ -121,15 +122,13 @@ export default function DashboardPage() {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { icon: Phone,          bg: '#007AFF', value: stats.callsToday,     label: 'Anrufe heute' },
-          { icon: Ticket,         bg: '#FF9500', value: stats.openTickets,    label: 'Offene Tickets' },
-          { icon: PhoneForwarded, bg: '#34C759', value: stats.forwardedCalls, label: 'Weitergeleitet' },
-          { icon: TrendingUp,     bg: '#AF52DE', value: stats.totalCalls,     label: 'Gesamt' },
-        ].map(({ icon: Icon, bg, value, label }) => (
+          { icon: Phone,          value: stats.callsToday,     label: 'Anrufe heute' },
+          { icon: Ticket,         value: stats.openTickets,    label: 'Offene Tickets' },
+          { icon: PhoneForwarded, value: stats.forwardedCalls, label: 'Weitergeleitet' },
+          { icon: TrendingUp,     value: stats.totalCalls,     label: 'Gesamt' },
+        ].map(({ icon: Icon, value, label }) => (
           <div key={label} className="bg-white rounded-3xl p-5 lg:p-6" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-4" style={{ background: bg }}>
-              <Icon className="w-5 h-5 text-white" />
-            </div>
+            <Icon className="w-5 h-5 text-[#AEAEB2] mb-4" />
             <p className="text-3xl lg:text-4xl font-bold text-[#1D1D1F] tracking-tight leading-none">{value}</p>
             <p className="text-xs text-[#6E6E73] mt-2 font-medium">{label}</p>
           </div>
@@ -141,14 +140,14 @@ export default function DashboardPage() {
         <h2 className="text-base font-bold text-[#1D1D1F] tracking-tight mb-4">Offene Anfragen</h2>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: AlertTriangle,  bg: '#FF3B301A', iconColor: '#FF3B30', value: stats.ticketsByPrio.dringend,      label: 'Dringend' },
-            { icon: CalendarClock,  bg: '#FF95001A', iconColor: '#FF9500', value: stats.ticketsByPrio.alltaeglich,   label: 'Alltäglich' },
-            { icon: Inbox,          bg: '#F2F2F7',   iconColor: '#AEAEB2', value: stats.ticketsByPrio.beiGelegenheit,label: 'Gelegenheit' },
-          ].map(({ icon: Icon, bg, iconColor, value, label }) => (
-            <div key={label} className="rounded-2xl p-4 text-center" style={{ background: bg }}>
-              <Icon className="w-5 h-5 mx-auto mb-2" style={{ color: iconColor }} />
-              <p className="text-2xl font-bold tracking-tight" style={{ color: iconColor }}>{value}</p>
-              <p className="text-xs font-semibold mt-1" style={{ color: iconColor }}>{label}</p>
+            { icon: AlertTriangle, value: stats.ticketsByPrio.dringend,       label: 'Dringend' },
+            { icon: CalendarClock, value: stats.ticketsByPrio.alltaeglich,    label: 'Alltäglich' },
+            { icon: Inbox,         value: stats.ticketsByPrio.beiGelegenheit, label: 'Gelegenheit' },
+          ].map(({ icon: Icon, value, label }) => (
+            <div key={label} className="bg-[#F2F2F7] rounded-2xl p-4 text-center">
+              <Icon className="w-5 h-5 text-[#AEAEB2] mx-auto mb-2" />
+              <p className="text-2xl font-bold tracking-tight text-[#1D1D1F]">{value}</p>
+              <p className="text-xs font-medium text-[#6E6E73] mt-1">{label}</p>
             </div>
           ))}
         </div>
@@ -228,13 +227,13 @@ export default function DashboardPage() {
       {/* Schnellzugriff */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4">
         {[
-          { icon: Users,    bg: '#007AFF', value: '3',    label: 'Mitarbeiter aktiv' },
-          { icon: ListTodo, bg: '#AF52DE', value: '8',    label: 'Aufgaben konfiguriert' },
-          { icon: Clock,    bg: '#34C759', value: '24/7', label: 'Verfügbarkeit' },
-        ].map(({ icon: Icon, bg, value, label }) => (
+          { icon: Users,    value: '3',    label: 'Mitarbeiter aktiv' },
+          { icon: ListTodo, value: '8',    label: 'Aufgaben konfiguriert' },
+          { icon: Clock,    value: '24/7', label: 'Verfügbarkeit' },
+        ].map(({ icon: Icon, value, label }) => (
           <div key={label} className="bg-white rounded-3xl p-5 flex items-center gap-4" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: bg }}>
-              <Icon className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-[#F2F2F7] flex items-center justify-center flex-shrink-0">
+              <Icon className="w-5 h-5 text-[#6E6E73]" />
             </div>
             <div>
               <p className="text-2xl font-bold text-[#1D1D1F] tracking-tight leading-none">{value}</p>
