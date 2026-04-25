@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Search, CheckCircle2, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, CheckCircle2, Clock, ChevronDown } from 'lucide-react'
 import {
   SiGooglecalendar, SiGooglecalendarHex,
   SiGmail, SiGmailHex,
@@ -167,21 +167,30 @@ function CategorySection({ category, query }: { category: Category; query: strin
     <div>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between mb-4 group"
+        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all group ${
+          open
+            ? 'bg-slate-50 border-slate-200'
+            : 'bg-white border-slate-200 hover:bg-slate-50'
+        }`}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+        <div className="flex items-center gap-3">
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          />
+          <span className="text-sm font-semibold text-slate-700">
             {category.label}
           </span>
-          <span className="text-xs text-slate-300 font-medium">{filtered.length}</span>
+          <span className="text-xs font-medium text-slate-400 bg-slate-200 rounded-full px-2 py-0.5">
+            {filtered.length}
+          </span>
         </div>
-        {open
-          ? <ChevronUp className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          : <ChevronDown className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-        }
+        <span className="text-xs text-slate-400 group-hover:text-slate-600 transition-colors">
+          {open ? 'Einklappen' : 'Ausklappen'}
+        </span>
       </button>
+
       {open && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
           {filtered.map(integration => (
             <IntegrationCard key={integration.name} integration={integration} />
           ))}
