@@ -11,9 +11,8 @@ import Link from 'next/link'
 function formatTime(iso: string) {
   const d = new Date(iso)
   const now = new Date()
-  if (d.toDateString() === now.toDateString()) {
+  if (d.toDateString() === now.toDateString())
     return `Heute, ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
-  }
   return `Gestern, ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
 }
 
@@ -29,30 +28,22 @@ function CallStatusDot({ status }: { status: string }) {
     in_progress: 'bg-[#007AFF]',
     missed: 'bg-[#FF3B30]',
   }
-  return <span className={`w-2 h-2 rounded-full flex-shrink-0 ${colors[status] ?? 'bg-[#AEAEB2]'}`} />
+  return <span className={`w-2 h-2 rounded-full flex-shrink-0 ${colors[status] ?? 'bg-[#C7C7CC]'}`} />
 }
 
 function PrioBadge({ prio }: { prio: string }) {
   const map: Record<string, { cls: string; label: string }> = {
     hoch:    { cls: 'bg-[#FF3B301A] text-[#FF3B30]', label: 'Dringend' },
     mittel:  { cls: 'bg-[#FF95001A] text-[#FF9500]', label: 'Alltäglich' },
-    niedrig: { cls: 'bg-[#F5F5F7] text-[#6E6E73]',   label: 'Gelegenheit' },
+    niedrig: { cls: 'bg-[#F2F2F7] text-[#6E6E73]',   label: 'Gelegenheit' },
   }
-  const style = map[prio] ?? map.niedrig
-  return (
-    <span className={`px-2 py-0.5 rounded-lg text-xs font-medium ${style.cls}`}>
-      {style.label}
-    </span>
-  )
+  const s = map[prio] ?? map.niedrig
+  return <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
 }
 
 interface Stats {
-  callsToday: number
-  openTickets: number
-  totalCalls: number
-  forwardedCalls: number
-  recentCalls: Record<string, unknown>[]
-  recentTickets: Record<string, unknown>[]
+  callsToday: number; openTickets: number; totalCalls: number; forwardedCalls: number
+  recentCalls: Record<string, unknown>[]; recentTickets: Record<string, unknown>[]
   ticketsByPrio: { dringend: number; alltaeglich: number; beiGelegenheit: number }
 }
 
@@ -66,8 +57,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadStats() {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      const today = new Date(); today.setHours(0, 0, 0, 0)
       try {
         const [callsToday, openTickets, totalCalls, forwardedCalls, recentCalls, recentTickets, ticketsHoch, ticketsMittel, ticketsNiedrig] = await Promise.all([
           supabase.from('calls').select('id', { count: 'exact', head: true }).gte('started_at', today.toISOString()),
@@ -81,21 +71,13 @@ export default function DashboardPage() {
           supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('status', 'offen').eq('prioritaet', 'niedrig'),
         ])
         setStats({
-          callsToday: callsToday.count ?? 0,
-          openTickets: openTickets.count ?? 0,
-          totalCalls: totalCalls.count ?? 0,
-          forwardedCalls: forwardedCalls.count ?? 0,
+          callsToday: callsToday.count ?? 0, openTickets: openTickets.count ?? 0,
+          totalCalls: totalCalls.count ?? 0, forwardedCalls: forwardedCalls.count ?? 0,
           recentCalls: (recentCalls.data ?? []) as Record<string, unknown>[],
           recentTickets: (recentTickets.data ?? []) as Record<string, unknown>[],
-          ticketsByPrio: {
-            dringend: ticketsHoch.count ?? 0,
-            alltaeglich: ticketsMittel.count ?? 0,
-            beiGelegenheit: ticketsNiedrig.count ?? 0,
-          },
+          ticketsByPrio: { dringend: ticketsHoch.count ?? 0, alltaeglich: ticketsMittel.count ?? 0, beiGelegenheit: ticketsNiedrig.count ?? 0 },
         })
-      } catch (err) {
-        console.error('Dashboard load error:', err)
-      }
+      } catch (err) { console.error(err) }
       setLoading(false)
     }
     loadStats()
@@ -106,133 +88,136 @@ export default function DashboardPage() {
     return s.charAt(0).toUpperCase() + s.slice(1)
   })()
 
-  if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[#6E6E73]">Wird geladen…</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-8 h-8 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto space-y-5">
+
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[#1D1D1F] tracking-tight">Dashboard</h1>
-        <p className="text-[#6E6E73] text-sm mt-1">{capitalizedDate}</p>
+      <div className="pt-2">
+        <h1 className="text-3xl lg:text-4xl font-bold text-[#1D1D1F] tracking-tight">Dashboard</h1>
+        <p className="text-[#6E6E73] text-sm mt-1.5">{capitalizedDate}</p>
       </div>
 
       {/* Status banner */}
-      <div className="bg-[#007AFF] rounded-2xl px-5 py-5 lg:px-7 lg:py-6 mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
-          <span className="text-white/90 text-sm font-medium">ImmoGreta ist aktiv</span>
+      <div className="bg-[#1D1D1F] rounded-3xl px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse" />
+            <span className="text-white/70 text-xs font-medium uppercase tracking-widest">Live</span>
+          </div>
+          <p className="text-white text-lg font-semibold tracking-tight">ImmoGreta ist aktiv</p>
+          <p className="text-white/50 text-sm mt-0.5 font-medium">+1 (662) 439-4944</p>
         </div>
-        <p className="text-white/70 text-sm font-medium tracking-wide">+1 (662) 439-4944</p>
+        <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+          <Phone className="w-5 h-5 text-white" />
+        </div>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { icon: Phone,         bg: 'bg-[#007AFF1A]', iconCls: 'text-[#007AFF]', value: stats.callsToday,    label: 'Anrufe heute' },
-          { icon: Ticket,        bg: 'bg-[#FF95001A]', iconCls: 'text-[#FF9500]', value: stats.openTickets,   label: 'Offene Tickets' },
-          { icon: PhoneForwarded,bg: 'bg-[#34C7591A]', iconCls: 'text-[#34C759]', value: stats.forwardedCalls,label: 'Weitergeleitet' },
-          { icon: TrendingUp,    bg: 'bg-[#AF52DE1A]', iconCls: 'text-[#AF52DE]', value: stats.totalCalls,    label: 'Anrufe gesamt' },
-        ].map(({ icon: Icon, bg, iconCls, value, label }) => (
-          <div key={label} className="bg-white rounded-2xl p-4 lg:p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-              <Icon className={`w-4 h-4 ${iconCls}`} />
+          { icon: Phone,          bg: '#007AFF', value: stats.callsToday,     label: 'Anrufe heute' },
+          { icon: Ticket,         bg: '#FF9500', value: stats.openTickets,    label: 'Offene Tickets' },
+          { icon: PhoneForwarded, bg: '#34C759', value: stats.forwardedCalls, label: 'Weitergeleitet' },
+          { icon: TrendingUp,     bg: '#AF52DE', value: stats.totalCalls,     label: 'Gesamt' },
+        ].map(({ icon: Icon, bg, value, label }) => (
+          <div key={label} className="bg-white rounded-3xl p-5 lg:p-6" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-4" style={{ background: bg }}>
+              <Icon className="w-5 h-5 text-white" />
             </div>
-            <p className="text-2xl lg:text-3xl font-bold text-[#1D1D1F] tracking-tight">{value}</p>
-            <p className="text-xs font-medium text-[#6E6E73] mt-1">{label}</p>
+            <p className="text-3xl lg:text-4xl font-bold text-[#1D1D1F] tracking-tight leading-none">{value}</p>
+            <p className="text-xs text-[#6E6E73] mt-2 font-medium">{label}</p>
           </div>
         ))}
       </div>
 
-      {/* Offene Anfragen nach Priorität */}
-      <div className="bg-white rounded-2xl p-4 lg:p-6 mb-6" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-        <h2 className="text-sm font-semibold text-[#1D1D1F] mb-4">Offene Anfragen nach Priorität</h2>
+      {/* Prioritäten */}
+      <div className="bg-white rounded-3xl p-5 lg:p-6" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <h2 className="text-base font-bold text-[#1D1D1F] tracking-tight mb-4">Offene Anfragen</h2>
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-[#FF3B301A] rounded-2xl p-3 lg:p-4 text-center">
-            <AlertTriangle className="w-5 h-5 text-[#FF3B30] mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#FF3B30]">{stats.ticketsByPrio.dringend}</p>
-            <p className="text-xs font-semibold text-[#FF3B30] mt-1">Dringend</p>
-          </div>
-          <div className="bg-[#FF95001A] rounded-2xl p-3 lg:p-4 text-center">
-            <CalendarClock className="w-5 h-5 text-[#FF9500] mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#FF9500]">{stats.ticketsByPrio.alltaeglich}</p>
-            <p className="text-xs font-semibold text-[#FF9500] mt-1">Alltäglich</p>
-          </div>
-          <div className="bg-[#F5F5F7] rounded-2xl p-3 lg:p-4 text-center">
-            <Inbox className="w-5 h-5 text-[#AEAEB2] mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#3A3A3C]">{stats.ticketsByPrio.beiGelegenheit}</p>
-            <p className="text-xs font-semibold text-[#6E6E73] mt-1">Gelegenheit</p>
-          </div>
+          {[
+            { icon: AlertTriangle,  bg: '#FF3B301A', iconColor: '#FF3B30', value: stats.ticketsByPrio.dringend,      label: 'Dringend' },
+            { icon: CalendarClock,  bg: '#FF95001A', iconColor: '#FF9500', value: stats.ticketsByPrio.alltaeglich,   label: 'Alltäglich' },
+            { icon: Inbox,          bg: '#F2F2F7',   iconColor: '#AEAEB2', value: stats.ticketsByPrio.beiGelegenheit,label: 'Gelegenheit' },
+          ].map(({ icon: Icon, bg, iconColor, value, label }) => (
+            <div key={label} className="rounded-2xl p-4 text-center" style={{ background: bg }}>
+              <Icon className="w-5 h-5 mx-auto mb-2" style={{ color: iconColor }} />
+              <p className="text-2xl font-bold tracking-tight" style={{ color: iconColor }}>{value}</p>
+              <p className="text-xs font-semibold mt-1" style={{ color: iconColor }}>{label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Two columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        {/* Recent calls */}
-        <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <div className="px-4 lg:px-5 py-4 flex items-center justify-between border-b border-[#F5F5F7]">
-            <h2 className="text-sm font-semibold text-[#1D1D1F]">Letzte Anrufe</h2>
-            <Link href="/anrufe" className="text-xs text-[#007AFF] font-medium flex items-center gap-1 hover:opacity-70 transition-opacity">
-              Alle anzeigen <ArrowRight className="w-3 h-3" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Letzte Anrufe */}
+        <div className="bg-white rounded-3xl overflow-hidden" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div className="px-5 py-4 flex items-center justify-between">
+            <h2 className="text-base font-bold text-[#1D1D1F] tracking-tight">Letzte Anrufe</h2>
+            <Link href="/anrufe" className="flex items-center gap-1 text-xs font-semibold text-[#007AFF] hover:opacity-70 transition-opacity">
+              Alle <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
+          <div className="h-px bg-[#F2F2F7] mx-5" />
           {stats.recentCalls.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <PhoneMissed className="w-10 h-10 text-[#AEAEB2] mx-auto mb-3" />
+            <div className="py-12 text-center">
+              <PhoneMissed className="w-10 h-10 text-[#C7C7CC] mx-auto mb-3" />
               <p className="text-sm font-medium text-[#3A3A3C]">Noch keine Anrufe</p>
-              <p className="text-xs text-[#AEAEB2] mt-1">+1 (662) 439-4944 anrufen</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#F5F5F7]">
-              {stats.recentCalls.map((call) => (
-                <div key={call.id as string} className="px-4 lg:px-5 py-3 flex items-center gap-3 hover:bg-[#F5F5F7] transition-colors">
-                  <CallStatusDot status={call.status as string} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#1D1D1F] truncate">
-                      {(call.caller_number as string) || 'Unbekannte Nummer'}
-                    </p>
-                    <p className="text-xs text-[#AEAEB2]">{formatTime(call.started_at as string)}</p>
+            <div>
+              {stats.recentCalls.map((call, i) => (
+                <div key={call.id as string}>
+                  <div className="px-5 py-3.5 flex items-center gap-3 hover:bg-[#F9F9F9] transition-colors">
+                    <CallStatusDot status={call.status as string} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#1D1D1F] truncate">{(call.caller_number as string) || 'Unbekannt'}</p>
+                      <p className="text-xs text-[#AEAEB2] mt-0.5">{formatTime(call.started_at as string)}</p>
+                    </div>
+                    <span className="text-xs font-medium text-[#AEAEB2]">{formatDuration(call.duration_sec as number | null)}</span>
                   </div>
-                  <span className="text-xs text-[#AEAEB2] flex-shrink-0">{formatDuration(call.duration_sec as number | null)}</span>
+                  {i < stats.recentCalls.length - 1 && <div className="h-px bg-[#F2F2F7] ml-14" />}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Recent tickets */}
-        <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <div className="px-4 lg:px-5 py-4 flex items-center justify-between border-b border-[#F5F5F7]">
-            <h2 className="text-sm font-semibold text-[#1D1D1F]">Neueste Tickets</h2>
-            <Link href="/tickets" className="text-xs text-[#007AFF] font-medium flex items-center gap-1 hover:opacity-70 transition-opacity">
-              Alle anzeigen <ArrowRight className="w-3 h-3" />
+        {/* Neueste Tickets */}
+        <div className="bg-white rounded-3xl overflow-hidden" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div className="px-5 py-4 flex items-center justify-between">
+            <h2 className="text-base font-bold text-[#1D1D1F] tracking-tight">Neueste Tickets</h2>
+            <Link href="/tickets" className="flex items-center gap-1 text-xs font-semibold text-[#007AFF] hover:opacity-70 transition-opacity">
+              Alle <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
+          <div className="h-px bg-[#F2F2F7] mx-5" />
           {stats.recentTickets.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <Ticket className="w-10 h-10 text-[#AEAEB2] mx-auto mb-3" />
+            <div className="py-12 text-center">
+              <Ticket className="w-10 h-10 text-[#C7C7CC] mx-auto mb-3" />
               <p className="text-sm font-medium text-[#3A3A3C]">Keine offenen Tickets</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#F5F5F7]">
-              {stats.recentTickets.map((ticket) => (
-                <div key={ticket.id as string} className="px-4 lg:px-5 py-3 flex items-center gap-3 hover:bg-[#F5F5F7] transition-colors">
-                  <span className="text-lg flex-shrink-0">
-                    {ticket.kategorie === 'Reparatur' ? '🔧' : ticket.kategorie === 'Wartung' ? '🛠️' : ticket.kategorie === 'Anfrage' ? '❓' : ticket.kategorie === 'Beschwerde' ? '⚠️' : '📋'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#1D1D1F] truncate">{ticket.kategorie as string}</p>
-                    {ticket.beschreibung ? <p className="text-xs text-[#AEAEB2] truncate">{String(ticket.beschreibung)}</p> : null}
+            <div>
+              {stats.recentTickets.map((ticket, i) => (
+                <div key={ticket.id as string}>
+                  <div className="px-5 py-3.5 flex items-center gap-3 hover:bg-[#F9F9F9] transition-colors">
+                    <span className="text-xl flex-shrink-0">
+                      {ticket.kategorie === 'Reparatur' ? '🔧' : ticket.kategorie === 'Wartung' ? '🛠️' : ticket.kategorie === 'Anfrage' ? '❓' : ticket.kategorie === 'Beschwerde' ? '⚠️' : '📋'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#1D1D1F] truncate">{ticket.kategorie as string}</p>
+                      {ticket.beschreibung ? <p className="text-xs text-[#AEAEB2] truncate mt-0.5">{String(ticket.beschreibung)}</p> : null}
+                    </div>
+                    <PrioBadge prio={ticket.prioritaet as string} />
                   </div>
-                  <PrioBadge prio={ticket.prioritaet as string} />
+                  {i < stats.recentTickets.length - 1 && <div className="h-px bg-[#F2F2F7] ml-14" />}
                 </div>
               ))}
             </div>
@@ -240,22 +225,25 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Schnellzugriff */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4">
         {[
-          { icon: Users,   bg: 'bg-[#007AFF1A]', iconCls: 'text-[#007AFF]', value: '3',    label: 'Aktive Mitarbeiter' },
-          { icon: ListTodo,bg: 'bg-[#AF52DE1A]', iconCls: 'text-[#AF52DE]', value: '8',    label: 'Konfigurierte Aufgaben' },
-          { icon: Clock,   bg: 'bg-[#34C7591A]', iconCls: 'text-[#34C759]', value: '24/7', label: 'Verfügbarkeit' },
-        ].map(({ icon: Icon, bg, iconCls, value, label }) => (
-          <div key={label} className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-              <Icon className={`w-5 h-5 ${iconCls}`} />
+          { icon: Users,    bg: '#007AFF', value: '3',    label: 'Mitarbeiter aktiv' },
+          { icon: ListTodo, bg: '#AF52DE', value: '8',    label: 'Aufgaben konfiguriert' },
+          { icon: Clock,    bg: '#34C759', value: '24/7', label: 'Verfügbarkeit' },
+        ].map(({ icon: Icon, bg, value, label }) => (
+          <div key={label} className="bg-white rounded-3xl p-5 flex items-center gap-4" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: bg }}>
+              <Icon className="w-6 h-6 text-white" />
             </div>
-            <p className="text-2xl font-bold text-[#1D1D1F] tracking-tight">{value}</p>
-            <p className="text-xs font-medium text-[#6E6E73] mt-1">{label}</p>
+            <div>
+              <p className="text-2xl font-bold text-[#1D1D1F] tracking-tight leading-none">{value}</p>
+              <p className="text-xs text-[#6E6E73] font-medium mt-1">{label}</p>
+            </div>
           </div>
         ))}
       </div>
+
     </div>
   )
 }
